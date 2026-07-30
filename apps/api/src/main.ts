@@ -40,9 +40,12 @@ async function bootstrap() {
     .build();
   SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, swaggerConfig));
 
-  const port = config.get('API_PORT', { infer: true });
-  await app.listen(port);
-  Logger.log(`🚀 API ready on http://localhost:${port} (docs at /docs)`, 'Bootstrap');
+  // Cloud hosts (Render, Railway, Fly, Heroku…) inject the port to bind via
+  // `PORT`. Honour it when present; fall back to API_PORT for local dev. Bind
+  // 0.0.0.0 so the container is reachable from outside the host.
+  const port = Number(process.env.PORT) || config.get('API_PORT', { infer: true });
+  await app.listen(port, '0.0.0.0');
+  Logger.log(`🚀 API ready on port ${port} (docs at /docs)`, 'Bootstrap');
 }
 
 void bootstrap();

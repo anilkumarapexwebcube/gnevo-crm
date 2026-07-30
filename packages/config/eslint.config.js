@@ -14,7 +14,13 @@ export default tseslint.config(
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/consistent-type-imports': 'error',
+      // Intentionally OFF: this rule (without type-aware linting) rewrites
+      // `import { X }` → `import type { X }` for NestJS providers injected by
+      // constructor type. With `emitDecoratorMetadata`, that erases the runtime
+      // metadata Nest needs and BREAKS dependency injection at runtime (compiles
+      // fine, app won't boot). Re-enable only alongside type-checked linting
+      // (parserOptions.projectService), which respects emitDecoratorMetadata.
+      '@typescript-eslint/consistent-type-imports': 'off',
     },
   },
   {
