@@ -3,9 +3,15 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@gnevo/types'],
+  // Turbopack (used by `next dev --turbopack`) — dramatically faster dev
+  // compilation than webpack. Mirror the `.js` → `.ts` resolution below so
+  // workspace packages with NodeNext `.js` import specifiers still resolve.
+  turbopack: {
+    resolveExtensions: ['.tsx', '.ts', '.jsx', '.js', '.mjs', '.json'],
+  },
   // Workspace packages use NodeNext `.js` import specifiers that point at `.ts`
-  // sources. Teach webpack to resolve `.js` → `.ts`/`.tsx` so those packages
-  // bundle correctly.
+  // sources. Teach webpack (used by `next build`) to resolve `.js` → `.ts`/`.tsx`
+  // so those packages bundle correctly.
   webpack: (config) => {
     config.resolve.extensionAlias = {
       '.js': ['.ts', '.tsx', '.js'],

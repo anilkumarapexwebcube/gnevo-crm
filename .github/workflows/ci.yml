@@ -40,9 +40,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # pnpm version is read from package.json "packageManager" — don't set it
+      # here too, or CI fails with ERR_PNPM_BAD_PM_VERSION (version mismatch).
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
@@ -76,7 +76,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Dependency vulnerability scan (Trivy)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@master
         with:
           scan-type: fs
           scan-ref: .

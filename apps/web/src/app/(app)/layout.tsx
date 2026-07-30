@@ -7,22 +7,16 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { IdleWatcher } from '@/components/idle-watcher';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const user = await getCurrentUser();
+  // Fetch everything the shell needs in parallel — one round-trip, not three.
+  const [user, brandingRes, securityRes] = await Promise.all([
+    getCurrentUser(),
+    apiServer<{ displayName: string; brandColor: string | null }>('/v1/org/branding').catch(() => null),
+    apiServer<{ idleTimeoutMinutes: number }>('/v1/org/security').catch(() => null),
+  ]);
   if (!user) redirect('/login');
 
-  let branding = { displayName: 'Gnevo CRM', brandColor: null as string | null };
-  try {
-    branding = await apiServer<{ displayName: string; brandColor: string | null }>('/v1/org/branding');
-  } catch {
-    /* fall back to defaults */
-  }
-
-  let idleTimeoutMinutes = 0;
-  try {
-    idleTimeoutMinutes = (await apiServer<{ idleTimeoutMinutes: number }>('/v1/org/security')).idleTimeoutMinutes;
-  } catch {
-    /* default off */
-  }
+  const branding = brandingRes ?? { displayName: 'Gnevo CRM', brandColor: null as string | null };
+  const idleTimeoutMinutes = securityRes?.idleTimeoutMinutes ?? 0;
 
   return (
     <TooltipProvider>

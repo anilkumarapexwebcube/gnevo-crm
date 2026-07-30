@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import Link, { useLinkStatus } from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Activity,
@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   LineChart,
+  Loader2,
   ListChecks,
   FolderKanban,
   Megaphone,
@@ -132,6 +133,7 @@ export function Sidebar({ brandName = 'Gnevo CRM' }: { brandName?: string }) {
                   strokeWidth={active ? 2.4 : 2}
                 />
                 {!collapsed && <span className="text-[13.5px] leading-none">{item.label}</span>}
+                {!collapsed && <NavPending />}
               </Link>
             );
 
@@ -180,4 +182,11 @@ export function Sidebar({ brandName = 'Gnevo CRM' }: { brandName?: string }) {
       </div>
     </aside>
   );
+}
+
+/** Shows a spinner on the sidebar link being navigated to (instant click feedback). */
+function NavPending() {
+  const { pending } = useLinkStatus();
+  if (!pending) return null;
+  return <Loader2 className="ml-auto size-3.5 shrink-0 animate-spin text-primary" />;
 }
