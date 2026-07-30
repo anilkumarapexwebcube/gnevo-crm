@@ -34,7 +34,10 @@ Create a Redis database → copy the **`redis://` (or `rediss://`) URL**. Save a
 2. Service settings:
    - **Root Directory:** `/` (monorepo root)
    - **Runtime:** Node
-   - **Build Command:** `pnpm install --frozen-lockfile && pnpm --filter @gnevo/api... build`
+   - **Build Command:** `pnpm install --frozen-lockfile --prod=false && pnpm --filter @gnevo/api... build`
+     > `--prod=false` is required because `NODE_ENV=production` makes pnpm skip
+     > devDependencies (`typescript`, `@gnevo/config`'s shared tsconfigs) that the
+     > build needs. Runtime only needs the built `dist/`, so keep `NODE_ENV=production`.
    - **Start Command:** `node apps/api/dist/main.js`
    - **Instance Type:** Free (or Starter if you need it always-on without spin-down)
 3. **Environment** tab → add vars (from `.env.example`): `DATABASE_URL`, `REDIS_URL`,
@@ -44,23 +47,33 @@ Create a Redis database → copy the **`redis://` (or `rediss://`) URL**. Save a
    > **Port:** don't set `API_PORT` on Render — the app binds Render's injected `PORT`
    > automatically (falls back to `API_PORT`/4000 only for local dev). Nothing to do here.
 4. Deploy → note the public API URL, e.g. `https://gnevo-api.onrender.com`.
-5. **Run migrations once** (Render → your service → **Shell** tab, or a one-off Job).
-   Run Prisma directly — the `pnpm` scripts wrap `dotenv -e ../../.env`, but on Render
-   there is **no `.env` file** (vars live in the environment), so call the binary directly:
-   ```bash
-   pnpm --filter @gnevo/db exec prisma migrate deploy
-   pnpm --filter @gnevo/db exec tsx prisma/seed.ts   # optional demo data; skip in real prod, use Register instead
-   ```
+5. **Run migrations.** Render's **Shell** and one-off **Jobs** are paid-only, so on the
+   free tier use ONE of these:
+   - **Easiest (run once from your machine):** your local `.env` `DATABASE_URL` already
+     points at the same Neon DB, so run locally: `pnpm --filter @gnevo/db migrate:deploy`
+     (and `pnpm db:seed` for optional demo data — skip in real prod, use Register instead).
+   - **Automatic (recommended):** prepend migrations to the **Start Command** so every
+     deploy applies pending migrations before booting (idempotent, no Shell needed):
+     ```
+     pnpm --filter @gnevo/db exec prisma migrate deploy && node apps/api/dist/main.js
+     ```
+   > The `pnpm` scripts wrap `dotenv -e ../../.env`; on Render there's no `.env` file, so
+   > the automatic option calls the Prisma binary directly (env vars come from the service).
 
 ## Step 4 — Deploy the Workers (Render Background Worker)
 Same repo, new Render service — this time pick **Background Worker** (not Web Service),
 since workers don't need to accept HTTP traffic:
 - **Root Directory:** `/`
-- **Build Command:** `pnpm install --frozen-lockfile && pnpm --filter @gnevo/workers... build`
+- **Build Command:** `pnpm install --frozen-lockfile --prod=false && pnpm --filter @gnevo/workers... build`
 - **Start Command:** `node apps/workers/dist/main.js`
 - **Environment:** `DATABASE_URL`, `REDIS_URL`, `NODE_ENV=production` (+ SMTP if you want scheduled report emails).
 
-> No Redis / don't need automations? You can skip the Workers service entirely.
+> **Render Background Workers have NO free tier** (minimum paid ~$7/mo) — only Web
+> Services and Static Sites are free. Options: **(a) skip Workers for now** — the CRM
+> (API + Web) runs fine without it; only background jobs (automations, webhook delivery,
+> scheduled report emails) won't run until you add it. **(b)** pay for a Render Starter
+> worker. **(c)** run the worker on a free-tier alt (Fly.io / Railway). Add it later when
+> you actually need automations — nothing else depends on it.
 
 ## Step 5 — Deploy the Web (Vercel)
 1. **Add New Project** → import this repo.
@@ -100,8 +113,9 @@ If you use Google Search Console, add this **Authorised redirect URI** in Google
 - **`render.yaml` blueprint:** you can define both the API (Web Service) and Workers
   (Background Worker) in one `render.yaml` at the repo root so both spin up together
   from a single "New Blueprint" deploy. Ask and I'll add one.
-- **Health check path:** set it to `/health` — the API exposes `/health`, `/health/live`
-  and `/health/ready` (these are excluded from the `/v1` prefix, so no `/v1` on them).
+- **Health check path:** set it to `/health/live` (simple liveness). The API exposes
+  `/health/live` (returns `{status:'ok'}`) and `/health/ready` (also checks the DB) —
+  there is **no bare `/health`**. Both are excluded from the `/v1` prefix.
 - **Shell access:** the **Shell** tab on a Render service gives you a one-off terminal in
   the running container — that's where you run the migration command in Step 3.5.
 - **Auto-deploy:** by default Render redeploys on every push to your connected branch;
