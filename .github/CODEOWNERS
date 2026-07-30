@@ -1,0 +1,21 @@
+# Squad ownership (see docs/08-folder-structure.md §11). Replace placeholders
+# with real GitHub teams before enabling required reviews.
+
+# CRM Core squad
+/apps/api/src/modules/leads/       @gnevo/crm-core
+/apps/api/src/modules/rbac/        @gnevo/crm-core
+/apps/api/src/modules/auth/        @gnevo/crm-core
+/apps/web/src/app/                 @gnevo/crm-core
+
+# Platform / data
+/packages/db/                      @gnevo/platform
+/packages/auth/                    @gnevo/platform
+/packages/types/                   @gnevo/platform
+/apps/workers/                     @gnevo/platform
+
+# Design system
+/packages/ui/                      @gnevo/design-eng
+
+# Infra / SRE
+/infra/                            @gnevo/infra
+/.github/                          @gnevo/infra

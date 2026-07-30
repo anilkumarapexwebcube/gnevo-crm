@@ -1,0 +1,28 @@
+{
+  "name": "@gnevo/workers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "dotenv -e ../../.env -- tsx watch src/main.ts",
+    "build": "tsc",
+    "start": "dotenv -e ../../.env -- node dist/main.js",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@gnevo/ai": "workspace:*",
+    "@gnevo/db": "workspace:*",
+    "bullmq": "^5.34.5",
+    "ioredis": "^5.4.2",
+    "nodemailer": "^9.0.3"
+  },
+  "devDependencies": {
+    "@gnevo/config": "workspace:*",
+    "@types/node": "^22.10.2",
+    "@types/nodemailer": "^8.0.1",
+    "dotenv-cli": "^8.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
