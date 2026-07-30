@@ -98,6 +98,22 @@ WEBAUTHN_ORIGIN=https://gnevo.vercel.app
 If you use Google Search Console, add this **Authorised redirect URI** in Google Cloud:
 `https://gnevo-api.onrender.com/v1/integrations/google/callback`
 
+## Step 6.5 — Email (SMTP) — REQUIRED for magic links, invites & password reset
+These features **email a link** to the user. If SMTP isn't configured the API can't send
+mail — it just logs the link to the server console (invisible on a cloud host), so users
+never receive it. Set these on the **API** service (Render → Environment) and redeploy:
+```
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=<your Gmail / Google Workspace address>
+SMTP_PASS=<16-char Gmail App Password — NOT your normal password>
+SMTP_FROM=Gnevo CRM <your address>
+```
+Gmail needs 2-Step Verification on + an **App Password** (Google Account → Security →
+App passwords). Works for a demo, but Gmail-sent mail often lands in **Spam** — for
+production use a transactional provider (Resend / Brevo / SendGrid) with your own domain
+verified (SPF/DKIM); just swap `SMTP_HOST/USER/PASS` for theirs.
+
 ## Step 7 — First login
 - Real use: open the web URL → **Register** to create your workspace (you become Owner),
   then invite your team from **Team**.
@@ -122,6 +138,27 @@ If you use Google Search Console, add this **Authorised redirect URI** in Google
   turn this off in settings if you want manual deploys only.
 
 ---
+
+## Full environment variable reference (API service)
+| Variable | Required? | Enables / notes |
+|----------|-----------|-----------------|
+| `DATABASE_URL` | ✅ required | Neon Postgres connection string |
+| `REDIS_URL` | ✅ required | Upstash Redis (no quotes in the UI) |
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | ✅ required | ≥16 chars; use strong random in prod (`node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`) |
+| `NODE_ENV` | ✅ `production` | (Render only — do NOT set on Vercel) |
+| `API_URL` | ✅ | This service's own public URL (non-empty, no trailing `/`) |
+| `WEB_URL` | ✅ | Vercel URL, no trailing `/` — used in emailed links |
+| `CORS_ORIGINS` | ✅ | Vercel origin, no trailing `/`, comma-separated for multiple |
+| `WEBAUTHN_RP_ID` | ✅ | web **domain only** (no scheme, no `/`) — passkeys |
+| `WEBAUTHN_ORIGIN` | ✅ | full web origin, no trailing `/` |
+| `SMTP_HOST/PORT/USER/PASS/FROM` | for email | magic link, invitations, password reset (see Step 6.5) |
+| `GROQ_API_KEY` *(or any one AI key)* | for AI | AI Assistant + AI Search. Others: `OPENAI_/ANTHROPIC_/GOOGLE_AI_/OPENROUTER_/DEEPSEEK_/XAI_API_KEY` |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | for GSC | Google Search Console integration (redirect URI `${API_URL}/v1/integrations/google/callback`, scope `webmasters.readonly`) |
+| `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` | for payments | Stripe billing |
+| `DATABASE_REPLICA_URL`, `JWT_ACCESS_TTL`, `JWT_REFRESH_TTL` | optional | sensible defaults; leave unset |
+
+> **Vercel (web) service** only needs `API_URL=<your Render API URL>`. Do **not** set
+> `NODE_ENV` there (it breaks the pnpm devDependency install).
 
 ## Gotchas & notes
 - **Migrations** must run against the production DB once per deploy that changes the
