@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { SYSTEM_ROLE_NAMES } from '@gnevo/auth';
+import { SYSTEM_ROLE_NAMES, hashPassword } from '@gnevo/auth';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { ensureSystemRole } from '../../common/ensure-role.js';
 import { AuditService } from '../events/audit.service.js';
@@ -16,6 +16,52 @@ export class UsersService {
     private readonly audit: AuditService,
     private readonly notifications: NotificationsService,
   ) {}
+
+  /**
+   * Create a staff account directly (admin sets a temporary password) — the
+   * alternative to the email-invite flow, useful when email delivery is down or
+   * for quick onboarding. The user is active immediately and can change their
+   * password from Settings.
+   */
+  async create(
+    actor: { id: string; roles: string[] },
+    organizationId: string,
+    dto: { fullName: string; email: string; password: string; roleKey: string; departmentId?: string | null; teamId?: string | null },
+  ) {
+    const email = dto.email.trim().toLowerCase();
+    const fullName = dto.fullName.trim();
+    if (!email || !fullName) throw new BadRequestException('Name and email are required');
+    if (dto.roleKey === 'owner') throw new ForbiddenException('The Owner role cannot be assigned here');
+    const existing = await this.prisma.user.findFirst({
+      where: { organizationId, email, deletedAt: null },
+      select: { id: true },
+    });
+    if (existing) throw new BadRequestException('A user with this email already exists');
+
+    const roleId = await ensureSystemRole(this.prisma, organizationId, dto.roleKey);
+    const passwordHash = await hashPassword(dto.password);
+    const user = await this.prisma.user.create({
+      data: {
+        organizationId,
+        email,
+        fullName,
+        passwordHash,
+        status: 'active',
+        departmentId: dto.departmentId || null,
+        roles: { create: { roleId } },
+        ...(dto.teamId ? { teams: { create: { teamId: dto.teamId } } } : {}),
+      },
+      select: { id: true, email: true, fullName: true },
+    });
+    await this.audit.record(organizationId, {
+      actorId: actor.id,
+      action: 'user.created',
+      resource: 'user',
+      resourceId: user.id,
+      after: { email, roleKey: dto.roleKey },
+    });
+    return user;
+  }
 
   async list(organizationId: string) {
     const users = await this.prisma.user.findMany({

@@ -50,6 +50,7 @@ import {
 import {
   bulkInvite,
   cancelInvite,
+  createUser,
   changeUserRole,
   createInvite,
   deleteUser,
@@ -371,9 +372,11 @@ export function TeamManager({
 }
 
 function InviteDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenChange: (v: boolean) => void; onDone: () => Promise<void> }) {
-  const [mode, setMode] = useState<'single' | 'bulk'>('single');
+  const [mode, setMode] = useState<'single' | 'bulk' | 'create'>('single');
   const [email, setEmail] = useState('');
   const [emails, setEmails] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [password, setPassword] = useState('');
   const [roleKey, setRoleKey] = useState('member');
   const [departmentId, setDepartmentId] = useState('');
   const [teamId, setTeamId] = useState('');
@@ -391,7 +394,29 @@ function InviteDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenCha
 
   async function submit() {
     setSaving(true);
-    if (mode === 'single') {
+    if (mode === 'create') {
+      if (password.length < 8) {
+        setSaving(false);
+        return toast.error('Password must be at least 8 characters');
+      }
+      const res = await createUser({
+        fullName: fullName.trim(),
+        email: email.trim(),
+        password,
+        roleKey,
+        departmentId: departmentId || undefined,
+        teamId: teamId || undefined,
+      });
+      setSaving(false);
+      if (res.ok) {
+        toast.success('User created — share the login details securely');
+        setFullName('');
+        setEmail('');
+        setPassword('');
+        onOpenChange(false);
+        await onDone();
+      } else toast.error(res.error ?? 'Could not create user');
+    } else if (mode === 'single') {
       const res = await createInvite(email.trim(), roleKey, {
         departmentId: departmentId || undefined,
         teamId: teamId || undefined,
@@ -424,32 +449,47 @@ function InviteDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenCha
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><MailPlus className="size-4" /> Invite people</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><MailPlus className="size-4" /> Add people</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-1 rounded-lg bg-secondary/40 p-1 ring-1 ring-border/50">
-            {(['single', 'bulk'] as const).map((m) => (
+            {(['single', 'bulk', 'create'] as const).map((m) => (
               <button
                 key={m}
                 type="button"
                 onClick={() => setMode(m)}
-                className={cn('flex-1 rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors cursor-pointer', mode === m ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground')}
+                className={cn('flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer', mode === m ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground')}
               >
-                {m === 'single' ? 'Single' : 'Bulk (CSV)'}
+                {m === 'single' ? 'Invite' : m === 'bulk' ? 'Bulk (CSV)' : 'Create directly'}
               </button>
             ))}
           </div>
 
-          {mode === 'single' ? (
-            <div className="grid gap-2">
-              <Label htmlFor="inv-email">Email</Label>
-              <Input id="inv-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="teammate@company.com" autoFocus />
-            </div>
-          ) : (
+          {mode === 'bulk' ? (
             <div className="grid gap-2">
               <Label htmlFor="inv-emails">Emails (comma, space or newline separated)</Label>
               <Textarea id="inv-emails" value={emails} onChange={(e) => setEmails(e.target.value)} rows={4} placeholder="a@co.com, b@co.com …" />
             </div>
+          ) : (
+            <>
+              {mode === 'create' && (
+                <div className="grid gap-2">
+                  <Label htmlFor="inv-name">Full name</Label>
+                  <Input id="inv-name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Doe" autoFocus />
+                </div>
+              )}
+              <div className="grid gap-2">
+                <Label htmlFor="inv-email">Email</Label>
+                <Input id="inv-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="teammate@company.com" autoFocus={mode === 'single'} />
+              </div>
+              {mode === 'create' && (
+                <div className="grid gap-2">
+                  <Label htmlFor="inv-pass">Temporary password</Label>
+                  <Input id="inv-pass" type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" />
+                  <p className="text-[11px] text-muted-foreground">Share this with the user securely. They can change it from Settings → Security after signing in.</p>
+                </div>
+              )}
+            </>
           )}
 
           <div className="grid gap-2">
@@ -464,7 +504,7 @@ function InviteDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenCha
             </Select>
           </div>
 
-          {mode === 'single' && (departments.length > 0 || teams.length > 0) && (
+          {mode !== 'bulk' && (departments.length > 0 || teams.length > 0) && (
             <div className="grid gap-3 sm:grid-cols-2">
               {departments.length > 0 && (
                 <InvitePicker label="Department" value={departmentId} onChange={setDepartmentId} placeholder="None" options={departments.map((d) => ({ value: d.id, label: d.name }))} />
@@ -477,8 +517,18 @@ function InviteDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenCha
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={submit} loading={saving} disabled={mode === 'single' ? !email.trim() : !emails.trim()}>
-            Send invitation{mode === 'bulk' ? 's' : ''}
+          <Button
+            onClick={submit}
+            loading={saving}
+            disabled={
+              mode === 'bulk'
+                ? !emails.trim()
+                : mode === 'create'
+                  ? !fullName.trim() || !email.trim() || !password
+                  : !email.trim()
+            }
+          >
+            {mode === 'create' ? 'Create user' : mode === 'bulk' ? 'Send invitations' : 'Send invitation'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -9,6 +9,14 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 
 const RoleSchema = z.object({ roleId: z.string().uuid() });
+const CreateUserSchema = z.object({
+  fullName: z.string().trim().min(1).max(120),
+  email: z.string().email(),
+  password: z.string().min(8).max(128),
+  roleKey: z.string().min(1).max(60),
+  departmentId: z.string().uuid().nullable().optional(),
+  teamId: z.string().uuid().nullable().optional(),
+});
 const ProfileSchema = z.object({
   designation: z.string().max(120).nullable().optional(),
   employeeId: z.string().max(60).nullable().optional(),
@@ -25,6 +33,15 @@ export class UsersController {
   @RequirePermissions({ resource: 'user', action: 'view' })
   list(@CurrentUser() user: AuthUser) {
     return this.users.list(user.organizationId);
+  }
+
+  @Post()
+  @RequirePermissions({ resource: 'user', action: 'create' })
+  create(
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodValidationPipe(CreateUserSchema)) dto: z.infer<typeof CreateUserSchema>,
+  ) {
+    return this.users.create({ id: user.id, roles: user.roles }, user.organizationId, dto);
   }
 
   // Self profile — any authenticated user (declared before :id to avoid capture).

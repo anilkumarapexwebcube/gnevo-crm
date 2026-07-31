@@ -331,6 +331,33 @@ export async function createInvite(
   }
 }
 
+export async function createUser(dto: {
+  fullName: string;
+  email: string;
+  password: string;
+  roleKey: string;
+  departmentId?: string;
+  teamId?: string;
+}): Promise<Result> {
+  try {
+    await apiServer('/v1/users', {
+      method: 'POST',
+      body: JSON.stringify({
+        fullName: dto.fullName,
+        email: dto.email,
+        password: dto.password,
+        roleKey: dto.roleKey,
+        ...(dto.departmentId ? { departmentId: dto.departmentId } : {}),
+        ...(dto.teamId ? { teamId: dto.teamId } : {}),
+      }),
+    });
+    revalidatePath('/directory');
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: err(e, 'Could not create user') };
+  }
+}
+
 export async function bulkInvite(
   emails: string[],
   roleKey: string,
