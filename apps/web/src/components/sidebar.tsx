@@ -63,7 +63,7 @@ const NAV: NavItem[] = [
   { label: 'Announcements', href: '/announcements', icon: Megaphone, section: 'Support', resource: 'announcement' },
   { label: 'Team Chat', href: '/chat', icon: MessagesSquare, section: 'Team', resource: 'chat' },
   { label: 'Calendar', href: '/calendar', icon: CalendarDays, section: 'Team', resource: 'calendar' },
-  { label: 'HR', href: '/hr', icon: CalendarCheck, section: 'Team', resource: 'hr' },
+  { label: 'Workplace', href: '/hr', icon: CalendarCheck, section: 'Team', resource: 'hr' },
   { label: 'Automations', href: '/automations', icon: Workflow, section: 'Platform', resource: 'automation' },
   { label: 'AI Assistant', href: '/ai', icon: Sparkles, section: 'Platform', resource: 'ai' },
   { label: 'AI Search', href: '/search', icon: ScanSearch, section: 'Platform', resource: 'ai' },
@@ -103,7 +103,7 @@ export function Sidebar({
     <aside
       className={cn(
         "relative flex shrink-0 flex-col border-r border-border/40 bg-background/80 backdrop-blur-xl transition-all duration-300 ease-in-out z-50",
-        collapsed ? "w-[4.5rem]" : "w-64"
+        collapsed ? "w-18" : "w-64"
       )}
     >
       <div className={cn("flex h-16 items-center px-4", collapsed ? "justify-center" : "gap-3")}>
@@ -119,7 +119,7 @@ export function Sidebar({
         </Link>
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] scrollbar-none">
         <nav className="flex flex-col gap-0.5">
           {visibleNav.map((item) => {
             const showSection = item.section && item.section !== currentSection;
@@ -135,7 +135,7 @@ export function Sidebar({
                   collapsed ? "justify-center size-10 mx-auto" : "gap-3 px-3 py-2",
                   active
                     ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground"
+                    : "text-muted-foreground hover:bg-foreground/4 hover:text-foreground"
                 )}
               >
                 {active && !collapsed && (
@@ -144,12 +144,12 @@ export function Sidebar({
                 <Icon
                   className={cn(
                     "shrink-0 transition-colors",
-                    collapsed ? "size-5" : "size-[18px]",
+                    collapsed ? "size-5" : "size-4.5",
                     active ? "text-primary" : "text-muted-foreground/70 group-hover:text-foreground"
                   )}
                   strokeWidth={active ? 2.4 : 2}
                 />
-                {!collapsed && <span className="text-[13.5px] leading-none">{item.label}</span>}
+                {!collapsed && <span className="text-[15px] leading-none">{item.label}</span>}
                 {!collapsed && <NavPending />}
               </Link>
             );
@@ -183,15 +183,15 @@ export function Sidebar({
         <button
           onClick={() => setCollapsed(!collapsed)}
           className={cn(
-            "flex w-full items-center rounded-lg text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground",
+            "flex w-full items-center rounded-lg text-muted-foreground transition-colors hover:bg-foreground/4 hover:text-foreground",
             collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2"
           )}
         >
           {collapsed ? (
-            <ChevronRight className="size-[18px]" />
+            <ChevronRight className="size-4.5" />
           ) : (
             <>
-              <ChevronLeft className="size-[18px]" />
+              <ChevronLeft className="size-4.5" />
               <span className="text-[13px] font-medium">Collapse</span>
             </>
           )}

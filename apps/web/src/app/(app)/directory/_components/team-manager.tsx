@@ -191,7 +191,7 @@ export function TeamManager({
           {canManage && (
             <Button size="sm" onClick={() => setInviteOpen(true)}>
               <UserPlus className="size-4" />
-              Invite people
+              Create Users
             </Button>
           )}
         </div>

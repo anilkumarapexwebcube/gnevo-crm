@@ -12,9 +12,12 @@ import {
   FolderKanban,
   LifeBuoy,
   CalendarCheck,
+  BarChart3,
+  BookOpen,
   type LucideIcon,
 } from 'lucide-react';
 import { apiServer, getCurrentUser } from '@/lib/session';
+import { can } from '@/lib/permissions';
 import { Card } from '@/components/ui/card';
 import { UserAvatar } from '@/components/user-avatar';
 import { PipelineChart } from './_components/pipeline-chart';
@@ -68,23 +71,34 @@ export default async function DashboardPage() {
   const openCount = allDeals.filter((d) => d.status === 'open').length;
   const myOpenTasks = prod ? prod.tasksTodo + prod.tasksInProgress : 0;
 
-  const kpis: { label: string; value: string; icon: LucideIcon; href: string; accent: string }[] = [
-    { label: 'Open forecast', value: money(board.forecast), icon: DollarSign, href: '/deals', accent: 'text-emerald-600 dark:text-emerald-400' },
-    { label: 'Open deals', value: String(openCount), icon: Handshake, href: '/deals', accent: 'text-primary' },
-    { label: 'Won value', value: money(wonValue), icon: Target, href: '/reports', accent: 'text-violet-600 dark:text-violet-400' },
+  // Only surface KPIs/links for tools this user can actually open (RBAC).
+  const perms = user?.permissions;
+  const allKpis: { label: string; value: string; icon: LucideIcon; href: string; accent: string; resource?: string }[] = [
+    { label: 'Open forecast', value: money(board.forecast), icon: DollarSign, href: '/deals', accent: 'text-emerald-600 dark:text-emerald-400', resource: 'deal' },
+    { label: 'Open deals', value: String(openCount), icon: Handshake, href: '/deals', accent: 'text-primary', resource: 'deal' },
+    { label: 'Won value', value: money(wonValue), icon: Target, href: '/reports', accent: 'text-violet-600 dark:text-violet-400', resource: 'report' },
     { label: 'My open tasks', value: String(myOpenTasks), icon: ListChecks, href: '/tasks', accent: prod && prod.tasksOverdue > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-foreground' },
   ];
+  const kpis = allKpis.filter((k) => !k.resource || can(perms, k.resource));
 
   const chartData = board.stages.map((s) => ({ name: s.name, value: s.total }));
   const today = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
-  const links: { label: string; href: string; icon: LucideIcon }[] = [
-    { label: 'Deals', href: '/deals', icon: Handshake },
-    { label: 'Leads', href: '/leads', icon: Users },
-    { label: 'Customers', href: '/customers', icon: Building2 },
-    { label: 'Projects', href: '/projects', icon: FolderKanban },
-    { label: 'Tickets', href: '/tickets', icon: LifeBuoy },
-    { label: 'HR', href: '/hr', icon: CalendarCheck },
-  ];
+  const links = (
+    [
+      { label: 'Deals', href: '/deals', icon: Handshake, resource: 'deal' },
+      { label: 'Leads', href: '/leads', icon: Users, resource: 'lead' },
+      { label: 'Customers', href: '/customers', icon: Building2, resource: 'customer' },
+      { label: 'Projects', href: '/projects', icon: FolderKanban, resource: 'project' },
+      { label: 'Tasks', href: '/tasks', icon: ListChecks },
+      { label: 'Tickets', href: '/tickets', icon: LifeBuoy, resource: 'ticket' },
+      { label: 'Calendar', href: '/calendar', icon: CalendarClock, resource: 'calendar' },
+      { label: 'Workplace', href: '/hr', icon: CalendarCheck, resource: 'hr' },
+      { label: 'Reports', href: '/reports', icon: BarChart3, resource: 'report' },
+      { label: 'Knowledge Base', href: '/kb', icon: BookOpen, resource: 'knowledge_base' },
+    ] as { label: string; href: string; icon: LucideIcon; resource?: string }[]
+  )
+    .filter((l) => !l.resource || can(perms, l.resource))
+    .slice(0, 6);
   const evTime = (iso: string) => {
     const d = new Date(iso);
     let h = d.getHours();

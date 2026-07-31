@@ -5,6 +5,8 @@ import { Topbar } from '@/components/topbar';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { IdleWatcher } from '@/components/idle-watcher';
+import { PermissionsProvider } from '@/components/permissions-provider';
+import { RouteGuard } from '@/components/route-guard';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // Fetch everything the shell needs in parallel — one round-trip, not three.
@@ -19,23 +21,26 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const idleTimeoutMinutes = securityRes?.idleTimeoutMinutes ?? 0;
 
   return (
-    <TooltipProvider>
-      {branding.brandColor && (
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `:root{--primary:${branding.brandColor};}`,
-          }}
-        />
-      )}
-      <div className="flex h-screen overflow-hidden">
-        <Sidebar brandName={branding.displayName} permissions={user.permissions} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar user={user} />
-          <main className="flex-1 overflow-auto p-6">{children}</main>
+    <PermissionsProvider permissions={user.permissions}>
+      <TooltipProvider>
+        {branding.brandColor && (
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `:root{--primary:${branding.brandColor};}`,
+            }}
+          />
+        )}
+        <RouteGuard />
+        <div className="flex h-screen overflow-hidden">
+          <Sidebar brandName={branding.displayName} permissions={user.permissions} />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <Topbar user={user} />
+            <main className="flex-1 overflow-auto p-6">{children}</main>
+          </div>
+          <Toaster />
         </div>
-        <Toaster />
-      </div>
-      <IdleWatcher minutes={idleTimeoutMinutes} />
-    </TooltipProvider>
+        <IdleWatcher minutes={idleTimeoutMinutes} />
+      </TooltipProvider>
+    </PermissionsProvider>
   );
 }
