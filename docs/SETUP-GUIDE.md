@@ -76,15 +76,12 @@ Run these once, in order:
 ```bash
 pnpm build                                   # compile shared packages (required before DB scripts)
 pnpm --filter @gnevo/db migrate:deploy       # apply all database migrations
-pnpm db:seed                                 # create demo org, roles, and login
+pnpm db:seed                                 # base data: permissions + RLS (no demo users)
 ```
 
-`db:seed` creates a demo workspace and this login:
-
-```
-Email:    owner@acme.test
-Password: DemoPassw0rd!
-```
+`db:seed` seeds only the global permissions and the RLS policies — **no demo org or
+users**. You create your own workspace by **registering** in the app (you become the
+Owner). Registration also sets up the org's roles automatically.
 
 > Fresh dev DB and want migrations tracked as you change the schema? use
 > `pnpm db:migrate` (migrate:dev) instead of `migrate:deploy`.
@@ -101,7 +98,8 @@ pnpm dev
 pnpm dev:core
 ```
 
-Then open **http://localhost:3000** and sign in with the demo login above.
+Then open **http://localhost:3000** and click **Register** to create your workspace
+(the first account becomes the **Owner**).
 
 - Web app: http://localhost:3000
 - API: http://localhost:4000  (Swagger docs at `/docs` if enabled)
@@ -110,7 +108,7 @@ Then open **http://localhost:3000** and sign in with the demo login above.
 
 ## 6. First things to try
 
-1. **Sign in** as `owner@acme.test`.
+1. **Register** your workspace (first account = Owner), then sign in.
 2. **Team** (sidebar → Admin → Team): invite a teammate by email, pick a role
    (Owner / Admin / HR / Manager / Employee / Viewer). If SMTP is off, the invite
    link is printed in the **API server console** — open it to accept.
@@ -130,7 +128,7 @@ Then open **http://localhost:3000** and sign in with the demo login above.
 | `pnpm build` | Build all apps & packages |
 | `pnpm --filter @gnevo/db migrate:deploy` | Apply existing DB migrations |
 | `pnpm db:migrate` | Create + apply a new migration (dev) |
-| `pnpm db:seed` | Seed demo data |
+| `pnpm db:seed` | Seed base data (permissions + RLS; no demo users) |
 | `pnpm db:studio` | Open Prisma Studio (browse the DB) |
 | `pnpm lint` / `pnpm typecheck` | Lint / type-check everything |
 

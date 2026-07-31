@@ -100,7 +100,7 @@ export default function PortalLoginPage() {
               type="submit"
               size="lg"
               disabled={loading}
-              className="mt-3 h-12 w-full rounded-xl bg-gradient-to-r from-primary to-primary/80 font-semibold shadow-md shadow-primary/20 transition-all duration-300 hover:shadow-lg hover:shadow-primary/30 hover:opacity-90 active:scale-[0.98]"
+              className="mt-3 h-12 w-full rounded-xl bg-linear-to-r from-primary to-primary/80 font-semibold shadow-md shadow-primary/20 transition-all duration-300 hover:shadow-lg hover:shadow-primary/30 hover:opacity-90 active:scale-[0.98]"
             >
               {loading ? 'Signing in…' : 'Sign in'}
             </Button>

@@ -378,14 +378,28 @@ export class AuthService {
   private async toAuthUser(userId: string): Promise<AuthUser> {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      include: { roles: { include: { role: true } } },
+      include: {
+        roles: {
+          include: { role: { include: { permissions: { include: { permission: true } } } } },
+        },
+      },
     });
+    // Flatten the user's effective permissions (resource:action) across all
+    // their roles — the UI uses this to hide nav/actions the user can't access.
+    const permissions = [
+      ...new Set(
+        user.roles.flatMap((ur) =>
+          ur.role.permissions.map((rp) => `${rp.permission.resource}:${rp.permission.action}`),
+        ),
+      ),
+    ];
     return {
       id: user.id,
       organizationId: user.organizationId,
       email: user.email,
       fullName: user.fullName,
       roles: user.roles.map((r) => r.role.key),
+      permissions,
       mfaEnabled: user.mfaEnabled,
     };
   }

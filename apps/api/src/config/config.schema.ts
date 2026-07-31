@@ -18,7 +18,10 @@ export const EnvSchema = z.object({
 
   JWT_ACCESS_SECRET: z.string().min(16),
   JWT_REFRESH_SECRET: z.string().min(16),
-  JWT_ACCESS_TTL: z.coerce.number().int().positive().default(900),
+  // 7 days. Long-lived on purpose so users aren't logged out mid-work — still
+  // fully revocable: every access token embeds its session id (`sid`) and the
+  // auth guard rejects tokens whose session was revoked (Settings → sessions).
+  JWT_ACCESS_TTL: z.coerce.number().int().positive().default(604800),
   JWT_REFRESH_TTL: z.coerce.number().int().positive().default(2_592_000),
 
   API_PORT: z.coerce.number().int().positive().default(4000),

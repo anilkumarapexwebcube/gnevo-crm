@@ -70,8 +70,8 @@ export default async function ProjectsPage() {
               className="group relative overflow-hidden flex flex-col gap-0 p-0 rounded-2xl shadow-sm border-0 ring-1 ring-border/50 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 hover:ring-primary/30 bg-gradient-to-br from-card to-card/50"
             >
               {/* Colored top accent */}
-              <div className="h-1 w-full bg-gradient-to-r from-primary/60 via-purple-500/40 to-blue-500/40 group-hover:from-primary group-hover:via-purple-500/70 group-hover:to-blue-500/60 transition-all duration-500" />
-              
+              <div className="h-1 w-full bg-linear-to-r from-primary/60 via-purple-500/40 to-blue-500/40 group-hover:from-primary group-hover:via-purple-500/70 group-hover:to-blue-500/60 transition-all duration-500" />
+
               <div className="flex flex-col gap-3 p-5 h-full">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -84,13 +84,13 @@ export default async function ProjectsPage() {
                   </div>
                   <ProjectRowActions id={p.id} name={p.name} />
                 </div>
-                
+
                 {p.description ? (
                   <p className="line-clamp-2 text-sm text-muted-foreground min-h-[40px]">{p.description}</p>
                 ) : (
                   <p className="line-clamp-2 text-sm text-muted-foreground/50 min-h-[40px] italic">No description provided.</p>
                 )}
-                
+
                 <div className="mt-auto flex items-center justify-between pt-4 border-t border-border/40">
                   <Badge variant="outline" className={`rounded-full shadow-sm text-[11px] font-semibold px-2.5 ${STATUS_STYLES[p.status] ?? ''}`}>
                     {p.status.replace('_', ' ')}

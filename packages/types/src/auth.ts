@@ -42,6 +42,10 @@ export const AuthUserSchema = z.object({
   email: EmailSchema,
   fullName: z.string(),
   roles: z.array(SystemRoleSchema.or(z.string())),
+  // Effective `resource:action` permission keys across the user's roles. Used
+  // by the web UI to hide nav/actions the user has no access to. Optional so
+  // token-derived principals (API keys, guard) needn't populate it.
+  permissions: z.array(z.string()).optional(),
   mfaEnabled: z.boolean(),
 });
 export type AuthUser = z.infer<typeof AuthUserSchema>;

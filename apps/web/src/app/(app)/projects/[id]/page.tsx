@@ -63,7 +63,7 @@ export default async function ProjectDetailPage({
 
       {/* Project Header */}
       <Card className="relative overflow-hidden p-0 rounded-2xl border-0 ring-1 ring-border/50 shadow-sm bg-gradient-to-br from-card to-card/50">
-        <div className="h-1 w-full bg-gradient-to-r from-primary via-purple-500/60 to-blue-500/50" />
+        <div className="h-1 w-full bg-linear-to-r from-primary via-purple-500/60 to-blue-500/50" />
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 p-6">
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-3">

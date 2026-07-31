@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('owner@acme.test');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [mfaStep, setMfaStep] = useState(false);
@@ -24,6 +24,7 @@ export default function LoginPage() {
   });
   const [mfaToken, setMfaToken] = useState('');
   const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   async function verifyWithPasskey() {
     if (!mfaToken) return;
@@ -44,6 +45,7 @@ export default function LoginPage() {
         body: JSON.stringify({ mfaToken, response: assertion, state }),
       });
       if (verifyRes.ok) {
+        setRedirecting(true);
         router.push('/dashboard');
         router.refresh();
         return;
@@ -89,6 +91,7 @@ export default function LoginPage() {
         return;
       }
       // Keep the button disabled while navigation happens (don't reset loading).
+      setRedirecting(true);
       router.push('/dashboard');
       router.refresh();
     } catch {
@@ -99,13 +102,33 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/15 via-background to-background" />
-      
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-primary/15 via-background to-background" />
+      {/* Ambient floating orbs for depth */}
+      <div className="pointer-events-none absolute -left-32 top-1/4 size-80 rounded-full bg-primary/10 blur-3xl animate-pulse" />
+      <div className="pointer-events-none absolute -right-32 bottom-1/4 size-80 rounded-full bg-purple-500/10 blur-3xl animate-pulse [animation-delay:1.2s]" />
+
+      {/* Post-login redirect overlay — premium branded transition to the dashboard */}
+      {redirecting && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-7 bg-background/85 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="relative grid size-20 place-items-center">
+            <span className="absolute inset-0 rounded-3xl bg-primary/25 animate-ping" />
+            <span className="absolute -inset-2 rounded-[1.75rem] border-2 border-primary/20 border-t-primary animate-spin" />
+            <span className="relative grid size-16 place-items-center rounded-3xl bg-linear-to-br from-primary to-primary/60 text-2xl font-bold text-primary-foreground shadow-xl shadow-primary/40">
+              G
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-1.5 text-center animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <p className="text-lg font-semibold text-foreground">Signing you in…</p>
+            <p className="text-sm text-muted-foreground">Taking you to your workspace</p>
+          </div>
+        </div>
+      )}
+
       <main className="relative z-10 w-full max-w-md px-6 animate-in fade-in zoom-in-95 duration-700 ease-out">
         <div className="flex flex-col gap-8 rounded-3xl border border-border/40 bg-background/60 p-8 shadow-2xl shadow-foreground/5 backdrop-blur-xl ring-1 ring-border/50">
           
           <div className="flex flex-col items-center text-center">
-            <div className="mb-6 grid size-12 place-items-center rounded-2xl bg-gradient-to-br from-primary to-primary/60 text-xl font-bold text-primary-foreground shadow-lg shadow-primary/30 ring-1 ring-primary/50">
+            <div className="mb-6 grid size-12 place-items-center rounded-2xl bg-linear-to-br from-primary to-primary/60 text-xl font-bold text-primary-foreground shadow-lg shadow-primary/30 ring-1 ring-primary/50">
               G
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome back</h1>
@@ -120,6 +143,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
+                placeholder="Enter Your Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -131,6 +155,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
+                placeholder="Enter Your Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -185,7 +210,7 @@ export default function LoginPage() {
                 type="submit"
                 size="lg"
                 disabled={loading}
-                className="mt-3 h-12 w-full rounded-xl bg-gradient-to-r from-primary to-primary/80 font-semibold shadow-md shadow-primary/20 transition-all duration-300 hover:shadow-lg hover:shadow-primary/30 hover:opacity-90 active:scale-[0.98]"
+                className="mt-3 h-12 w-full rounded-xl bg-linear-to-r from-primary to-primary/80 font-semibold shadow-md shadow-primary/20 transition-all duration-300 hover:shadow-lg hover:shadow-primary/30 hover:opacity-90 active:scale-[0.98]"
               >
                 {loading ? 'Signing in…' : mfaStep ? 'Verify & sign in' : 'Sign in'}
               </Button>

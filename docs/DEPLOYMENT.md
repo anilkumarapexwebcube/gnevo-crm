@@ -51,7 +51,8 @@ Create a Redis database → copy the **`redis://` (or `rediss://`) URL**. Save a
    free tier use ONE of these:
    - **Easiest (run once from your machine):** your local `.env` `DATABASE_URL` already
      points at the same Neon DB, so run locally: `pnpm --filter @gnevo/db migrate:deploy`
-     (and `pnpm db:seed` for optional demo data — skip in real prod, use Register instead).
+     (optionally `pnpm --filter @gnevo/db exec tsx prisma/seed.ts` to pre-seed permissions
+     + RLS — no demo data is created; you make your workspace via Register).
    - **Automatic (recommended):** prepend migrations to the **Start Command** so every
      deploy applies pending migrations before booting (idempotent, no Shell needed):
      ```
@@ -115,9 +116,8 @@ production use a transactional provider (Resend / Brevo / SendGrid) with your ow
 verified (SPF/DKIM); just swap `SMTP_HOST/USER/PASS` for theirs.
 
 ## Step 7 — First login
-- Real use: open the web URL → **Register** to create your workspace (you become Owner),
-  then invite your team from **Team**.
-- Demo: if you ran `db:seed`, sign in with `owner@acme.test` / `DemoPassw0rd!` and change it.
+- Open the web URL → **Register** to create your workspace (the first account becomes the
+  **Owner**), then invite your team from **Team**. There are no demo/seed accounts.
 
 ---
 

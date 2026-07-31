@@ -44,43 +44,60 @@ interface NavItem {
   href: string;
   icon: LucideIcon;
   section?: string;
+  /** RBAC resource this item needs `view`/`manage` on. Omitted = always shown. */
+  resource?: string;
 }
 
 const NAV: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, section: 'Workspace' },
-  { label: 'Leads', href: '/leads', icon: Users, section: 'CRM' },
-  { label: 'Customers', href: '/customers', icon: Building2, section: 'CRM' },
-  { label: 'Deals', href: '/deals', icon: Handshake, section: 'CRM' },
-  { label: 'Projects', href: '/projects', icon: FolderKanban, section: 'Delivery' },
-  { label: 'Tasks', href: '/tasks', icon: ListChecks, section: 'Delivery' },
-  { label: 'Invoices', href: '/invoices', icon: Receipt, section: 'Finance' },
-  { label: 'SEO', href: '/seo', icon: Search, section: 'Marketing' },
-  { label: 'Content', href: '/content', icon: PenSquare, section: 'Marketing' },
-  { label: 'Tickets', href: '/tickets', icon: LifeBuoy, section: 'Support' },
-  { label: 'Knowledge Base', href: '/kb', icon: BookOpen, section: 'Support' },
-  { label: 'Announcements', href: '/announcements', icon: Megaphone, section: 'Support' },
+  { label: 'Leads', href: '/leads', icon: Users, section: 'CRM', resource: 'lead' },
+  { label: 'Customers', href: '/customers', icon: Building2, section: 'CRM', resource: 'customer' },
+  { label: 'Deals', href: '/deals', icon: Handshake, section: 'CRM', resource: 'deal' },
+  { label: 'Projects', href: '/projects', icon: FolderKanban, section: 'Delivery', resource: 'project' },
+  { label: 'Tasks', href: '/tasks', icon: ListChecks, section: 'Delivery', resource: 'task' },
+  { label: 'Invoices', href: '/invoices', icon: Receipt, section: 'Finance', resource: 'invoice' },
+  { label: 'SEO', href: '/seo', icon: Search, section: 'Marketing', resource: 'seo_project' },
+  { label: 'Content', href: '/content', icon: PenSquare, section: 'Marketing', resource: 'article' },
+  { label: 'Tickets', href: '/tickets', icon: LifeBuoy, section: 'Support', resource: 'ticket' },
+  { label: 'Knowledge Base', href: '/kb', icon: BookOpen, section: 'Support', resource: 'article' },
+  { label: 'Announcements', href: '/announcements', icon: Megaphone, section: 'Support', resource: 'announcement' },
   { label: 'Team Chat', href: '/chat', icon: MessagesSquare, section: 'Team' },
   { label: 'Calendar', href: '/calendar', icon: CalendarDays, section: 'Team' },
   { label: 'HR', href: '/hr', icon: CalendarCheck, section: 'Team' },
-  { label: 'Automations', href: '/automations', icon: Workflow, section: 'Platform' },
-  { label: 'AI Assistant', href: '/ai', icon: Sparkles, section: 'Platform' },
-  { label: 'AI Search', href: '/search', icon: ScanSearch, section: 'Platform' },
-  { label: 'BI Dashboard', href: '/insights', icon: LineChart, section: 'Insights' },
-  { label: 'Reports', href: '/reports', icon: BarChart3, section: 'Insights' },
+  { label: 'Automations', href: '/automations', icon: Workflow, section: 'Platform', resource: 'automation' },
+  { label: 'AI Assistant', href: '/ai', icon: Sparkles, section: 'Platform', resource: 'ai' },
+  { label: 'AI Search', href: '/search', icon: ScanSearch, section: 'Platform', resource: 'ai' },
+  { label: 'BI Dashboard', href: '/insights', icon: LineChart, section: 'Insights', resource: 'report' },
+  { label: 'Reports', href: '/reports', icon: BarChart3, section: 'Insights', resource: 'report' },
   { label: 'Activity', href: '/activity', icon: Activity, section: 'Insights' },
-  { label: 'Team', href: '/directory', icon: Contact, section: 'Admin' },
-  { label: 'Structure', href: '/structure', icon: Network, section: 'Admin' },
-  { label: 'Roles', href: '/roles', icon: ShieldCheck, section: 'Admin' },
-  { label: 'Audit Log', href: '/audit', icon: ScrollText, section: 'Admin' },
+  { label: 'Team', href: '/directory', icon: Contact, section: 'Admin', resource: 'user' },
+  { label: 'Structure', href: '/structure', icon: Network, section: 'Admin', resource: 'department' },
+  { label: 'Roles', href: '/roles', icon: ShieldCheck, section: 'Admin', resource: 'role' },
+  { label: 'Audit Log', href: '/audit', icon: ScrollText, section: 'Admin', resource: 'audit_log' },
   { label: 'Settings', href: '/settings', icon: Settings, section: 'Admin' },
   { label: 'Profile', href: '/profile', icon: UserCircle, section: 'Admin' },
 ];
 
-export function Sidebar({ brandName = 'Gnevo CRM' }: { brandName?: string }) {
+export function Sidebar({
+  brandName = 'Gnevo CRM',
+  permissions,
+}: {
+  brandName?: string;
+  /** User's effective `resource:action` keys. Undefined = fail open (show all). */
+  permissions?: string[];
+}) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   let currentSection = '';
   const initial = brandName.trim().charAt(0).toUpperCase() || 'G';
+
+  // Show an item if it has no resource, or the user can view/manage it. If
+  // permissions are unknown (old session before this rolled out), fail open.
+  const canView = (resource?: string) => {
+    if (!resource || !permissions) return true;
+    return permissions.includes(`${resource}:manage`) || permissions.includes(`${resource}:view`);
+  };
+  const visibleNav = NAV.filter((item) => canView(item.resource));
 
   return (
     <aside
@@ -104,7 +121,7 @@ export function Sidebar({ brandName = 'Gnevo CRM' }: { brandName?: string }) {
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <nav className="flex flex-col gap-0.5">
-          {NAV.map((item) => {
+          {visibleNav.map((item) => {
             const showSection = item.section && item.section !== currentSection;
             if (item.section) currentSection = item.section;
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);

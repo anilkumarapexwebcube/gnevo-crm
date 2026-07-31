@@ -68,7 +68,7 @@ export default async function SeoPage() {
               className="group relative overflow-hidden flex flex-col gap-0 p-0 rounded-2xl shadow-sm border-0 ring-1 ring-border/50 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 hover:ring-primary/30 bg-gradient-to-br from-card to-card/50"
             >
               {/* Colored top accent */}
-              <div className="h-1 w-full bg-gradient-to-r from-primary/60 via-purple-500/40 to-blue-500/40 group-hover:from-primary group-hover:via-purple-500/70 group-hover:to-blue-500/60 transition-all duration-500" />
+              <div className="h-1 w-full bg-linear-to-r from-primary/60 via-purple-500/40 to-blue-500/40 group-hover:from-primary group-hover:via-purple-500/70 group-hover:to-blue-500/60 transition-all duration-500" />
 
               <div className="flex flex-col gap-3 p-5">
                 {/* Title row */}
@@ -100,11 +100,10 @@ export default async function SeoPage() {
                   </div>
                   <Badge
                     variant="outline"
-                    className={`rounded-full text-[11px] font-semibold px-2.5 ${
-                      p.gscConnected
+                    className={`rounded-full text-[11px] font-semibold px-2.5 ${p.gscConnected
                         ? 'text-green-600 border-green-500/30 bg-green-500/10'
                         : 'text-muted-foreground border-border/50 bg-muted/30'
-                    }`}
+                      }`}
                   >
                     {p.gscConnected ? '✓ GSC connected' : 'Not connected'}
                   </Badge>

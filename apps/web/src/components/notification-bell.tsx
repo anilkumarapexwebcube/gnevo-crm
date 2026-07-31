@@ -31,9 +31,14 @@ export function NotificationBell() {
 
   const load = useCallback(() => {
     startTransition(async () => {
-      const res = await fetchNotifications();
-      setItems(res.items);
-      setUnread(res.unread);
+      try {
+        const res = await fetchNotifications();
+        setItems(res.items);
+        setUnread(res.unread);
+      } catch {
+        // Transient/auth error (e.g. token refreshed mid-poll) — fail quietly
+        // instead of surfacing a full-screen server-action runtime error.
+      }
     });
   }, []);
 

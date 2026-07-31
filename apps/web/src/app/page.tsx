@@ -11,7 +11,7 @@ export default function Home() {
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/10 blur-[120px] rounded-full pointer-events-none" />
 
       <main className="relative z-10 mx-auto flex max-w-3xl flex-col items-center justify-center gap-8 px-6 text-center animate-in fade-in zoom-in-95 duration-1000 ease-out">
-        
+
         {/* Badge */}
         <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary shadow-sm ring-1 ring-primary/10 transition-all hover:bg-primary/10 animate-in slide-in-from-bottom-4 duration-700 delay-150 fill-mode-both">
           <Sparkles className="size-4" />
@@ -30,11 +30,11 @@ export default function Home() {
 
         {/* CTA */}
         <div className="mt-4 flex animate-in slide-in-from-bottom-8 duration-700 delay-500 fill-mode-both">
-          <Button 
-            nativeButton={false} 
+          <Button
+            nativeButton={false}
             render={<Link href="/login" />}
             size="lg"
-            className="group h-14 rounded-full px-8 text-base font-semibold bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/25 transition-all duration-300 hover:shadow-xl hover:shadow-primary/40 hover:-translate-y-1 active:translate-y-0"
+            className="group h-14 rounded-full px-8 text-base font-semibold bg-linear-to-r from-primary to-primary/80 shadow-lg shadow-primary/25 transition-all duration-300 hover:shadow-xl hover:shadow-primary/40 hover:-translate-y-1 active:translate-y-0"
           >
             Get Started
             <ArrowRight className="ml-2 size-5 transition-transform duration-300 group-hover:translate-x-1" />

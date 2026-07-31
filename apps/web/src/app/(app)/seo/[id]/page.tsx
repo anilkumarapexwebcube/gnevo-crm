@@ -54,9 +54,9 @@ export default async function SeoProjectDetailPage({
   const avgPosition =
     project.keywords.filter((k) => k.position != null).length > 0
       ? (
-          project.keywords.reduce((s, k) => s + (k.position ?? 0), 0) /
-          project.keywords.filter((k) => k.position != null).length
-        ).toFixed(1)
+        project.keywords.reduce((s, k) => s + (k.position ?? 0), 0) /
+        project.keywords.filter((k) => k.position != null).length
+      ).toFixed(1)
       : '—';
 
   return (
@@ -75,7 +75,7 @@ export default async function SeoProjectDetailPage({
 
       {/* Project Header */}
       <Card className="relative overflow-hidden p-0 rounded-2xl border-0 ring-1 ring-border/50 shadow-sm bg-gradient-to-br from-card to-card/50">
-        <div className="h-1 w-full bg-gradient-to-r from-primary via-purple-500/60 to-blue-500/50" />
+        <div className="h-1 w-full bg-linear-to-r from-primary via-purple-500/60 to-blue-500/50" />
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6">
           <div className="flex flex-col gap-1.5">
             <h1 className="text-3xl font-bold tracking-tight text-foreground">{project.name}</h1>
@@ -99,19 +99,17 @@ export default async function SeoProjectDetailPage({
 
       {/* GSC Status Banner */}
       <div
-        className={`flex items-center gap-3 rounded-2xl px-5 py-3.5 ring-1 transition-colors ${
-          project.gscConnected
+        className={`flex items-center gap-3 rounded-2xl px-5 py-3.5 ring-1 transition-colors ${project.gscConnected
             ? 'bg-green-500/5 ring-green-500/20 text-green-700 dark:text-green-400'
             : 'bg-muted/40 ring-border/40 text-muted-foreground'
-        }`}
+          }`}
       >
         <Badge
           variant="outline"
-          className={`shrink-0 rounded-full font-semibold text-xs ${
-            project.gscConnected
+          className={`shrink-0 rounded-full font-semibold text-xs ${project.gscConnected
               ? 'border-green-500/30 bg-green-500/10 text-green-600'
               : 'border-border/50 bg-muted/30 text-muted-foreground'
-          }`}
+            }`}
         >
           {project.gscConnected ? '✓ GSC connected' : 'Not connected'}
         </Badge>
@@ -195,13 +193,12 @@ export default async function SeoProjectDetailPage({
                     {k.position != null ? (
                       <Badge
                         variant="outline"
-                        className={`ml-auto rounded-full font-semibold text-xs ${
-                          k.position <= 3
+                        className={`ml-auto rounded-full font-semibold text-xs ${k.position <= 3
                             ? 'text-green-600 border-green-500/30 bg-green-500/10'
                             : k.position <= 10
-                            ? 'text-yellow-600 border-yellow-500/30 bg-yellow-500/10'
-                            : 'text-muted-foreground border-border/50 bg-muted/30'
-                        }`}
+                              ? 'text-yellow-600 border-yellow-500/30 bg-yellow-500/10'
+                              : 'text-muted-foreground border-border/50 bg-muted/30'
+                          }`}
                       >
                         #{k.position}
                       </Badge>

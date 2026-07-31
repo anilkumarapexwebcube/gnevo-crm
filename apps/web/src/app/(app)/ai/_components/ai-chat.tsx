@@ -71,7 +71,7 @@ export function AiChat() {
                     className="group relative overflow-hidden rounded-xl border border-border/50 bg-card p-4 text-left shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5"
                     style={{ animationDelay: `${i * 100}ms` }}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    <div className="absolute inset-0 bg-linear-to-r from-primary/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                     <div className="relative flex items-center justify-between">
                       <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{s}</span>
                       <ArrowUp className="size-4 text-muted-foreground/50 transition-all group-hover:text-primary group-hover:translate-x-1 group-hover:-translate-y-1" />
@@ -85,19 +85,17 @@ export function AiChat() {
           messages.map((m, i) => (
             <div key={i} className={`flex w-full ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`flex gap-3 max-w-[85%] sm:max-w-[75%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <div className={`mt-auto shrink-0 grid size-8 place-items-center rounded-full shadow-sm ring-1 ${
-                  m.role === 'user' 
-                    ? 'bg-secondary text-secondary-foreground ring-border/50' 
+                <div className={`mt-auto shrink-0 grid size-8 place-items-center rounded-full shadow-sm ring-1 ${m.role === 'user'
+                    ? 'bg-secondary text-secondary-foreground ring-border/50'
                     : 'bg-primary text-primary-foreground ring-primary/20'
-                }`}>
+                  }`}>
                   {m.role === 'user' ? <User className="size-4" /> : <Sparkles className="size-4" />}
                 </div>
                 <div
-                  className={`relative px-5 py-3.5 text-[15px] leading-relaxed shadow-sm ${
-                    m.role === 'user' 
-                      ? 'bg-gradient-to-br from-primary to-primary/90 text-primary-foreground rounded-[24px] rounded-br-[8px]' 
+                  className={`relative px-5 py-3.5 text-[15px] leading-relaxed shadow-sm ${m.role === 'user'
+                      ? 'bg-gradient-to-br from-primary to-primary/90 text-primary-foreground rounded-[24px] rounded-br-[8px]'
                       : 'bg-card border border-border/50 text-foreground rounded-[24px] rounded-bl-[8px]'
-                  }`}
+                    }`}
                 >
                   <div className="whitespace-pre-wrap">{m.content}</div>
                 </div>
@@ -105,7 +103,7 @@ export function AiChat() {
             </div>
           ))
         )}
-        
+
         {pending && (
           <div className="flex w-full justify-start">
             <div className="flex gap-3 max-w-[85%] sm:max-w-[75%] flex-row">
@@ -150,9 +148,9 @@ export function AiChat() {
             className="max-h-40 flex-1 resize-none bg-transparent px-4 py-3 text-[15px] outline-none placeholder:text-muted-foreground/60"
             style={{ minHeight: '44px' }}
           />
-          <Button 
-            type="submit" 
-            size="icon" 
+          <Button
+            type="submit"
+            size="icon"
             disabled={pending || !input.trim()}
             className="shrink-0 size-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-md transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 mb-0.5 mr-0.5"
           >
