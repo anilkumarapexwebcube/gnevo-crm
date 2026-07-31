@@ -386,13 +386,19 @@ export class AuthService {
     });
     // Flatten the user's effective permissions (resource:action) across all
     // their roles — the UI uses this to hide nav/actions the user can't access.
-    const permissions = [
-      ...new Set(
-        user.roles.flatMap((ur) =>
-          ur.role.permissions.map((rp) => `${rp.permission.resource}:${rp.permission.action}`),
-        ),
-      ),
-    ];
+    // For SYSTEM roles we read the current template (not the DB rows) so newly
+    // added modules show up for existing users without a data migration; custom
+    // roles use their explicit stored grants.
+    const perms = new Set<string>();
+    for (const ur of user.roles) {
+      const tpl = SYSTEM_ROLE_TEMPLATES[ur.role.key as SystemRole];
+      if (ur.role.isSystem && tpl) {
+        for (const p of tpl) perms.add(`${p.resource}:${p.action}`);
+      } else {
+        for (const rp of ur.role.permissions) perms.add(`${rp.permission.resource}:${rp.permission.action}`);
+      }
+    }
+    const permissions = [...perms];
     return {
       id: user.id,
       organizationId: user.organizationId,

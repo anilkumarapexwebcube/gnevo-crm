@@ -111,8 +111,8 @@ export default function LoginPage() {
       {redirecting && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-7 bg-background/85 backdrop-blur-xl animate-in fade-in duration-300">
           <div className="relative grid size-20 place-items-center">
-            <span className="absolute inset-0 rounded-3xl bg-primary/25 animate-ping" />
-            <span className="absolute -inset-2 rounded-[1.75rem] border-2 border-primary/20 border-t-primary animate-spin" />
+            <span className="absolute inset-0 rounded-full bg-primary/25 animate-ping" />
+            <span className="absolute -inset-2 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
             <span className="relative grid size-16 place-items-center rounded-3xl bg-linear-to-br from-primary to-primary/60 text-2xl font-bold text-primary-foreground shadow-xl shadow-primary/40">
               G
             </span>

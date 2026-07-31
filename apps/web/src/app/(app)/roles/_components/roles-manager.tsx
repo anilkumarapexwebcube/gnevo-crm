@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useMemo, useRef, useState } from 'react';
 import { ShieldCheck, Plus, Pencil, Copy, Trash2, Lock, Check, Sparkles, Download, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -34,6 +34,47 @@ import {
 } from '@/lib/team-actions';
 
 const humanize = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+/**
+ * Friendly labels + section grouping for the permission matrix, so whoever
+ * builds a role sees the same tools/sections as the app sidebar (not raw
+ * resource keys). Anything without an entry falls back to a humanized key.
+ */
+const RESOURCE_META: Record<string, { label: string; group: string; hint: string }> = {
+  lead: { label: 'Leads', group: 'CRM', hint: 'Prospective customers in the sales pipeline' },
+  customer: { label: 'Customers', group: 'CRM', hint: 'Won accounts / companies' },
+  contact: { label: 'Contacts', group: 'CRM', hint: 'People at customer companies' },
+  deal: { label: 'Deals', group: 'CRM', hint: 'Sales opportunities on the pipeline board' },
+  pipeline: { label: 'Pipelines', group: 'CRM', hint: 'Pipeline & stage configuration' },
+  project: { label: 'Projects', group: 'Delivery', hint: 'Client delivery projects & task boards' },
+  task: { label: 'Tasks', group: 'Delivery', hint: 'Tasks across projects' },
+  invoice: { label: 'Invoices', group: 'Finance', hint: 'Billing & invoices' },
+  payment: { label: 'Payments', group: 'Finance', hint: 'Payment records' },
+  seo_project: { label: 'SEO Projects', group: 'Marketing', hint: 'SEO projects, keywords & Search Console' },
+  campaign: { label: 'Campaigns', group: 'Marketing', hint: 'Marketing campaigns' },
+  article: { label: 'Content', group: 'Marketing', hint: 'Editorial content planner' },
+  ticket: { label: 'Support Tickets', group: 'Support', hint: 'Customer support tickets' },
+  knowledge_base: { label: 'Knowledge Base', group: 'Support', hint: 'Internal help articles' },
+  announcement: { label: 'Announcements', group: 'Support', hint: 'Company-wide posts' },
+  user: { label: 'Team Members', group: 'Team & HR', hint: 'Invite/manage staff (the Team page)' },
+  department: { label: 'Departments', group: 'Team & HR', hint: 'Org structure — departments' },
+  team: { label: 'Teams', group: 'Team & HR', hint: 'Org structure — teams' },
+  office: { label: 'Offices', group: 'Team & HR', hint: 'Org structure — offices' },
+  hr: { label: 'HR & Attendance', group: 'Team & HR', hint: 'Clock in/out, leave, holidays, HR analytics' },
+  calendar: { label: 'Calendar', group: 'Team & HR', hint: 'Events & meetings' },
+  chat: { label: 'Team Chat', group: 'Team & HR', hint: 'Internal channels & DMs' },
+  automation: { label: 'Automations', group: 'Platform', hint: 'Trigger → action workflows' },
+  ai: { label: 'AI Assistant & Search', group: 'Platform', hint: 'AI chat + semantic search' },
+  report: { label: 'Reports & Analytics', group: 'Insights', hint: 'Reports and the BI dashboard' },
+  organization: { label: 'Organization', group: 'Admin', hint: 'Workspace-level record (owner only)' },
+  role: { label: 'Roles & Permissions', group: 'Admin', hint: 'This roles screen' },
+  audit_log: { label: 'Audit Log', group: 'Admin', hint: 'Security audit trail' },
+  setting: { label: 'Workspace Settings', group: 'Admin', hint: 'Branding, integrations, API keys, etc.' },
+  api_key: { label: 'API Keys', group: 'Admin', hint: 'Programmatic API access keys' },
+};
+const GROUP_ORDER = ['CRM', 'Delivery', 'Finance', 'Marketing', 'Support', 'Team & HR', 'Platform', 'Insights', 'Admin', 'Other'];
+const resLabel = (r: string) => RESOURCE_META[r]?.label ?? humanize(r);
+const resGroup = (r: string) => RESOURCE_META[r]?.group ?? 'Other';
 const key = (r: string, a: string) => `${r}:${a}`;
 
 export function RolesManager({ canManage, initialRoles, catalog }: { canManage: boolean; initialRoles: RoleRow[]; catalog: RoleCatalog }) {
@@ -183,6 +224,16 @@ function RoleEditor({ role, catalog, readOnly, onClose, onSaved }: { role?: Role
   const actions = catalog.actions;
   const grantsAll = useMemo(() => new Set((role?.permissions ?? []).filter((p) => p.action === 'manage').map((p) => p.resource)), [role]);
 
+  // Group the resources into the same sections users see in the sidebar.
+  const grouped = useMemo(
+    () =>
+      GROUP_ORDER.map((group) => ({
+        group,
+        resources: catalog.resources.filter((r) => resGroup(r) === group),
+      })).filter((g) => g.resources.length > 0),
+    [catalog.resources],
+  );
+
   function toggle(r: string, a: string) {
     if (readOnly) return;
     setSelected((s) => {
@@ -249,39 +300,63 @@ function RoleEditor({ role, catalog, readOnly, onClose, onSaved }: { role?: Role
                 </tr>
               </thead>
               <tbody>
-                {catalog.resources.map((r) => (
-                  <tr key={r} className="border-t border-border/40 hover:bg-secondary/20">
-                    <td className="px-3 py-1.5">
-                      <button type="button" onClick={() => toggleRow(r)} disabled={readOnly} className="text-left text-xs font-medium text-foreground hover:text-primary disabled:cursor-default">
-                        {humanize(r)}
-                      </button>
-                    </td>
-                    {actions.map((a) => {
-                      const on = selected.has(key(r, a)) || (a !== 'manage' && grantsAll.has(r) && readOnly);
-                      return (
-                        <td key={a} className="px-2 py-1.5 text-center">
+                {grouped.map(({ group, resources }) => (
+                  <Fragment key={group}>
+                    <tr className="border-t border-border/40 bg-secondary/40">
+                      <td colSpan={actions.length + 1} className="px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground/70">
+                        {group}
+                      </td>
+                    </tr>
+                    {resources.map((r) => (
+                      <tr key={r} className="border-t border-border/40 hover:bg-secondary/20">
+                        <td className="px-3 py-1.5">
                           <button
                             type="button"
-                            onClick={() => toggle(r, a)}
+                            onClick={() => toggleRow(r)}
                             disabled={readOnly}
-                            aria-pressed={on}
-                            className={cn(
-                              'grid size-5 place-items-center rounded border transition-colors',
-                              on ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/30 hover:border-primary/50',
-                              readOnly && 'cursor-default',
-                            )}
+                            title={RESOURCE_META[r]?.hint}
+                            className="group/row flex flex-col text-left disabled:cursor-default"
                           >
-                            {on && <Check className="size-3.5" />}
+                            <span className="text-xs font-medium text-foreground group-hover/row:text-primary">{resLabel(r)}</span>
+                            {RESOURCE_META[r]?.hint && (
+                              <span className="text-[10px] leading-tight text-muted-foreground/60">{RESOURCE_META[r]!.hint}</span>
+                            )}
                           </button>
                         </td>
-                      );
-                    })}
-                  </tr>
+                        {actions.map((a) => {
+                          const on = selected.has(key(r, a)) || (a !== 'manage' && grantsAll.has(r) && readOnly);
+                          return (
+                            <td key={a} className="px-2 py-1.5 text-center">
+                              <button
+                                type="button"
+                                onClick={() => toggle(r, a)}
+                                disabled={readOnly}
+                                aria-pressed={on}
+                                className={cn(
+                                  'mx-auto grid size-5 place-items-center rounded border transition-colors',
+                                  on ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/30 hover:border-primary/50',
+                                  readOnly && 'cursor-default',
+                                )}
+                              >
+                                {on && <Check className="size-3.5" />}
+                              </button>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="text-[11px] text-muted-foreground">“Manage” grants every action on a module. Scope controls whose records the role can see (org / department / own).</p>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Tick the actions this role can perform on each tool. Click a module name to toggle
+            its whole row. <b className="font-semibold text-foreground">Manage</b> grants every
+            action (incl. future ones). <b className="font-semibold text-foreground">Data scope</b>
+            {' '}controls whose records they see — <i>Org</i> (everyone&apos;s), <i>Department</i>
+            {' '}(their dept), or <i>Own</i> (only their own).
+          </p>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>{readOnly ? 'Close' : 'Cancel'}</Button>

@@ -39,7 +39,11 @@ const ALL_RESOURCES: Resource[] = [
   'ai',
   'ticket',
   'article',
+  'knowledge_base',
   'announcement',
+  'calendar',
+  'chat',
+  'hr',
   'audit_log',
   'setting',
   'api_key',
@@ -68,6 +72,9 @@ const CRM_RESOURCES: Resource[] = [
 
 const PEOPLE_RESOURCES: Resource[] = ['user', 'department', 'team', 'office'];
 
+// Collaboration tools every staff member uses day-to-day.
+const COLLAB_RESOURCES: Resource[] = ['calendar', 'chat', 'knowledge_base'];
+
 export const SYSTEM_ROLE_TEMPLATES: Record<SystemRole, RolePermissionTemplate[]> = {
   owner: manageAll('org'),
   admin: manageAll('org').filter((p) => p.resource !== 'organization'),
@@ -75,29 +82,43 @@ export const SYSTEM_ROLE_TEMPLATES: Record<SystemRole, RolePermissionTemplate[]>
   // touch admins/owner (enforced in code), and has no CRM data powers by default.
   hr: [
     ...PEOPLE_RESOURCES.map((resource) => ({ resource, action: 'manage' as Action, scope: 'org' as Scope })),
+    { resource: 'hr', action: 'manage', scope: 'org' },
     { resource: 'organization', action: 'view', scope: 'org' },
     { resource: 'report', action: 'view', scope: 'org' },
     { resource: 'announcement', action: 'view', scope: 'org' },
+    ...COLLAB_RESOURCES.map((resource) => ({ resource, action: 'view' as Action, scope: 'org' as Scope })),
   ],
-  manager: CRM_RESOURCES.flatMap((resource) =>
-    (['view', 'create', 'update', 'delete'] as Action[]).map((action) => ({
-      resource,
-      action,
-      scope: 'department' as Scope,
-    })),
-  ),
-  member: CRM_RESOURCES.flatMap((resource) =>
-    (['view', 'create', 'update'] as Action[]).map((action) => ({
-      resource,
-      action,
-      scope: 'own' as Scope,
-    })),
-  ),
-  viewer: CRM_RESOURCES.map((resource) => ({
-    resource,
-    action: 'view' as Action,
-    scope: 'org' as Scope,
-  })),
+  manager: [
+    ...CRM_RESOURCES.flatMap((resource) =>
+      (['view', 'create', 'update', 'delete'] as Action[]).map((action) => ({
+        resource,
+        action,
+        scope: 'department' as Scope,
+      })),
+    ),
+    ...COLLAB_RESOURCES.flatMap((resource) =>
+      (['view', 'create', 'update'] as Action[]).map((action) => ({ resource, action, scope: 'department' as Scope })),
+    ),
+    { resource: 'hr', action: 'view', scope: 'own' },
+  ],
+  member: [
+    ...CRM_RESOURCES.flatMap((resource) =>
+      (['view', 'create', 'update'] as Action[]).map((action) => ({
+        resource,
+        action,
+        scope: 'own' as Scope,
+      })),
+    ),
+    ...COLLAB_RESOURCES.flatMap((resource) =>
+      (['view', 'create', 'update'] as Action[]).map((action) => ({ resource, action, scope: 'own' as Scope })),
+    ),
+    { resource: 'hr', action: 'view', scope: 'own' },
+  ],
+  viewer: [
+    ...CRM_RESOURCES.map((resource) => ({ resource, action: 'view' as Action, scope: 'org' as Scope })),
+    ...COLLAB_RESOURCES.map((resource) => ({ resource, action: 'view' as Action, scope: 'org' as Scope })),
+    { resource: 'hr', action: 'view', scope: 'org' },
+  ],
 };
 
 export const SYSTEM_ROLE_NAMES: Record<SystemRole, string> = {
