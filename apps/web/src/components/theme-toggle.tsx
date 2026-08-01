@@ -8,12 +8,10 @@ export function ThemeToggle() {
   const [dark, setDark] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem('theme');
-    const isDark =
-      stored === 'dark' ||
-      (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    setDark(isDark);
-    document.documentElement.classList.toggle('dark', isDark);
+    // Reflect whatever the pre-hydration scripts already applied (a user's saved
+    // choice, or — when they have none — the workspace's default theme). Don't
+    // recompute from system here, or it would override the org default.
+    setDark(document.documentElement.classList.contains('dark'));
   }, []);
 
   function toggle() {

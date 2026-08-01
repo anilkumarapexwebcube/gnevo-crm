@@ -2,31 +2,51 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Palette } from 'lucide-react';
+import { Palette, Sun, Moon, Monitor } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { updateBranding } from '../actions';
 
+type ThemePref = 'light' | 'dark' | 'system';
+const THEME_OPTIONS: { value: ThemePref; label: string; icon: typeof Sun }[] = [
+  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'dark', label: 'Dark', icon: Moon },
+  { value: 'system', label: 'System', icon: Monitor },
+];
+
+/** Apply a theme to the live document (so the save previews instantly). */
+function applyTheme(theme: ThemePref) {
+  const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('dark', dark);
+  // Clear any personal override so the workspace default takes effect for the admin too.
+  localStorage.removeItem('theme');
+}
+
 export function BrandingCard({
   displayName,
   brandColor,
+  theme: initialTheme,
 }: {
   displayName: string;
   brandColor: string | null;
+  theme: ThemePref;
 }) {
   const router = useRouter();
   const [name, setName] = useState(displayName);
   const [color, setColor] = useState(brandColor ?? '#6366f1');
+  const [theme, setTheme] = useState<ThemePref>(initialTheme);
   const [pending, startTransition] = useTransition();
 
   function save(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      const res = await updateBranding({ displayName: name.trim(), brandColor: color });
+      const res = await updateBranding({ displayName: name.trim(), brandColor: color, theme });
       if (res.ok) {
+        applyTheme(theme);
         toast.success('Branding updated');
         router.refresh();
       } else {
@@ -80,6 +100,32 @@ export function BrandingCard({
           </div>
           <p className="text-xs text-muted-foreground">
             Applied as the primary accent across the app.
+          </p>
+        </div>
+        <div className="grid gap-2">
+          <Label>Default theme</Label>
+          <div className="flex items-center gap-1 rounded-xl bg-secondary/40 p-1 ring-1 ring-border/50">
+            {THEME_OPTIONS.map((opt) => {
+              const Icon = opt.icon;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setTheme(opt.value)}
+                  className={cn(
+                    'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors cursor-pointer',
+                    theme === opt.value ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <Icon className="size-4" />
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            The workspace&apos;s default appearance for everyone. Members can still switch
+            their own view with the theme toggle.
           </p>
         </div>
         <div>

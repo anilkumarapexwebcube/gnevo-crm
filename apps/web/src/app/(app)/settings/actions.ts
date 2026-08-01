@@ -434,6 +434,7 @@ export async function testIntegration(provider: string): Promise<ActionResult> {
 export async function updateBranding(input: {
   displayName?: string;
   brandColor?: string;
+  theme?: 'light' | 'dark' | 'system';
 }): Promise<ActionResult> {
   try {
     await apiServer('/v1/org/branding', { method: 'PATCH', body: JSON.stringify(input) });

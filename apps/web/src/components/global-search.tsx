@@ -86,11 +86,11 @@ export function GlobalSearch() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group flex h-9 w-64 items-center gap-2 rounded-full border border-border/50 bg-secondary/30 px-3 text-sm text-muted-foreground transition-all duration-300 hover:border-primary/40 hover:bg-secondary/60 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+        className="group flex h-9 items-center gap-2 rounded-lg border border-border/60 bg-secondary/40 px-3 text-sm font-medium text-foreground/80 transition-colors duration-150 hover:border-border hover:bg-secondary/70 focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
       >
-        <Search className="size-4 transition-colors group-hover:text-primary" />
-        <span className="flex-1 text-left">Search…</span>
-        <kbd className="hidden rounded border border-border/50 bg-background/50 px-1.5 py-0.5 font-mono text-[10px] font-medium sm:inline-block">
+        <Search className="size-4 text-muted-foreground" />
+        <span>Search</span>
+        <kbd className="ml-2 hidden items-center rounded border border-border/60 bg-background px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-flex">
           ⌘K
         </kbd>
       </button>

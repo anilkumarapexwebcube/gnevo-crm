@@ -180,22 +180,31 @@ export function Sidebar({
       </div>
 
       <div className="border-t border-border/40 p-3">
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className={cn(
-            "flex w-full items-center rounded-lg text-muted-foreground transition-colors hover:bg-foreground/4 hover:text-foreground",
-            collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2"
-          )}
-        >
-          {collapsed ? (
-            <ChevronRight className="size-4.5" />
-          ) : (
-            <>
-              <ChevronLeft className="size-4.5" />
-              <span className="text-[13px] font-medium">Collapse</span>
-            </>
-          )}
-        </button>
+        {collapsed ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  onClick={() => setCollapsed(!collapsed)}
+                  className="flex w-full items-center justify-center rounded-lg p-2.5 text-muted-foreground transition-colors hover:bg-foreground/4 hover:text-foreground cursor-pointer"
+                >
+                  <ChevronRight className="size-4.5" />
+                </button>
+              }
+            />
+            <TooltipContent side="right" className="px-2 py-1 text-xs font-medium">
+              Expand
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:bg-foreground/4 hover:text-foreground cursor-pointer"
+          >
+            <ChevronLeft className="size-4.5" />
+            <span className="text-[13px] font-medium">Collapse</span>
+          </button>
+        )}
       </div>
     </aside>
   );

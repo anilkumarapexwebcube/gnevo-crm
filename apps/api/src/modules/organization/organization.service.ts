@@ -3,9 +3,16 @@ import type { Prisma } from '@gnevo/db';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { AuditService } from '../events/audit.service.js';
 
+type ThemePref = 'light' | 'dark' | 'system';
 interface Branding {
   displayName?: string;
   brandColor?: string;
+  theme?: ThemePref;
+}
+interface BrandingResult {
+  displayName: string;
+  brandColor: string | null;
+  theme: ThemePref;
 }
 
 export interface CustomFieldDef {
@@ -27,7 +34,7 @@ export class OrganizationService {
     private readonly audit: AuditService,
   ) {}
 
-  async getBranding(organizationId: string): Promise<{ displayName: string; brandColor: string | null }> {
+  async getBranding(organizationId: string): Promise<BrandingResult> {
     const org = await this.prisma.organization.findUniqueOrThrow({
       where: { id: organizationId },
       select: { name: true, settings: true },
@@ -36,6 +43,7 @@ export class OrganizationService {
     return {
       displayName: branding.displayName || org.name,
       brandColor: branding.brandColor || null,
+      theme: branding.theme ?? 'system',
     };
   }
 
@@ -43,7 +51,7 @@ export class OrganizationService {
     organizationId: string,
     input: Branding,
     actorId?: string,
-  ): Promise<{ displayName: string; brandColor: string | null }> {
+  ): Promise<BrandingResult> {
     const org = await this.prisma.organization.findUniqueOrThrow({
       where: { id: organizationId },
       select: { settings: true },
@@ -54,6 +62,7 @@ export class OrganizationService {
       ...current,
       ...(input.displayName !== undefined ? { displayName: input.displayName } : {}),
       ...(input.brandColor !== undefined ? { brandColor: input.brandColor } : {}),
+      ...(input.theme !== undefined ? { theme: input.theme } : {}),
     };
     await this.prisma.organization.update({
       where: { id: organizationId },

@@ -14,14 +14,14 @@ export default async function SettingsPage() {
   if (!user) redirect('/login');
 
   const isAdmin = user.roles.some((r) => r === 'owner' || r === 'admin');
-  let branding: { displayName: string; brandColor: string | null } | null = null;
+  let branding: { displayName: string; brandColor: string | null; theme: 'light' | 'dark' | 'system' } | null = null;
   let customFields: CustomFieldDef[] = [];
   let aiPreference: { provider: string | null; model: string | null } | null = null;
   let scheduledReports = false;
   if (isAdmin) {
     try {
       const [b, cf, ai, sr] = await Promise.all([
-        apiServer<{ displayName: string; brandColor: string | null }>('/v1/org/branding'),
+        apiServer<{ displayName: string; brandColor: string | null; theme: 'light' | 'dark' | 'system' }>('/v1/org/branding'),
         apiServer<CustomFieldDef[]>('/v1/org/custom-fields?entity=customer'),
         apiServer<{ provider: string | null; model: string | null }>('/v1/org/ai-preferences'),
         apiServer<{ enabled: boolean }>('/v1/org/scheduled-reports'),

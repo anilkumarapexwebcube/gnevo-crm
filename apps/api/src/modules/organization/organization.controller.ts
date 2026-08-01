@@ -22,6 +22,7 @@ const BrandingSchema = z.object({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, 'Use a hex color like #6366f1')
     .optional(),
+  theme: z.enum(['light', 'dark', 'system']).optional(),
 });
 
 const CustomFieldsSchema = z.object({
@@ -70,7 +71,7 @@ export class OrganizationController {
   @Patch('branding')
   updateBranding(
     @CurrentUser() user: AuthUser,
-    @Body(new ZodValidationPipe(BrandingSchema)) dto: { displayName?: string; brandColor?: string },
+    @Body(new ZodValidationPipe(BrandingSchema)) dto: { displayName?: string; brandColor?: string; theme?: 'light' | 'dark' | 'system' },
   ) {
     if (!user.roles.some((r) => r === 'owner' || r === 'admin')) {
       throw new ForbiddenException('Only owners and admins can change branding');
