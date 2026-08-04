@@ -435,6 +435,10 @@ export async function updateBranding(input: {
   displayName?: string;
   brandColor?: string;
   theme?: 'light' | 'dark' | 'system';
+  colors?: {
+    light?: { background?: string; foreground?: string; card?: string; border?: string };
+    dark?: { background?: string; foreground?: string; card?: string; border?: string };
+  };
 }): Promise<ActionResult> {
   try {
     await apiServer('/v1/org/branding', { method: 'PATCH', body: JSON.stringify(input) });

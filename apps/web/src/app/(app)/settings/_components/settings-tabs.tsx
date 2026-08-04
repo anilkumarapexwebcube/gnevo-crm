@@ -21,7 +21,7 @@ import type { CustomFieldDef } from '../actions';
 interface Props {
   user: { fullName: string; email: string; mfaEnabled: boolean };
   isAdmin: boolean;
-  branding: { displayName: string; brandColor: string | null; theme: 'light' | 'dark' | 'system' } | null;
+  branding: import('./branding-types').BrandingData | null;
   customFields: CustomFieldDef[];
   aiPreference: { provider: string | null; model: string | null } | null;
   scheduledReports: boolean;
@@ -116,7 +116,7 @@ export function SettingsTabs({
         {tab === 'workspace' && isAdmin && (
           <div className="flex flex-col gap-5">
             {branding && (
-              <BrandingCard displayName={branding.displayName} brandColor={branding.brandColor} theme={branding.theme} />
+              <BrandingCard displayName={branding.displayName} brandColor={branding.brandColor} theme={branding.theme} colors={branding.colors} />
             )}
             <AiPreferencesCard
               provider={aiPreference?.provider ?? null}

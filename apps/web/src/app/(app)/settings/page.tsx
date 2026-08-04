@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { Settings as SettingsIcon } from 'lucide-react';
 import { getCurrentUser, apiServer } from '@/lib/session';
 import { SettingsTabs } from './_components/settings-tabs';
+import type { BrandingData } from './_components/branding-types';
 import type { CustomFieldDef } from './actions';
 
 export const metadata = {
@@ -14,14 +15,14 @@ export default async function SettingsPage() {
   if (!user) redirect('/login');
 
   const isAdmin = user.roles.some((r) => r === 'owner' || r === 'admin');
-  let branding: { displayName: string; brandColor: string | null; theme: 'light' | 'dark' | 'system' } | null = null;
+  let branding: BrandingData | null = null;
   let customFields: CustomFieldDef[] = [];
   let aiPreference: { provider: string | null; model: string | null } | null = null;
   let scheduledReports = false;
   if (isAdmin) {
     try {
       const [b, cf, ai, sr] = await Promise.all([
-        apiServer<{ displayName: string; brandColor: string | null; theme: 'light' | 'dark' | 'system' }>('/v1/org/branding'),
+        apiServer<BrandingData>('/v1/org/branding'),
         apiServer<CustomFieldDef[]>('/v1/org/custom-fields?entity=customer'),
         apiServer<{ provider: string | null; model: string | null }>('/v1/org/ai-preferences'),
         apiServer<{ enabled: boolean }>('/v1/org/scheduled-reports'),

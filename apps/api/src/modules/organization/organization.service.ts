@@ -4,15 +4,27 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { AuditService } from '../events/audit.service.js';
 
 type ThemePref = 'light' | 'dark' | 'system';
+interface ThemeColors {
+  background?: string;
+  foreground?: string;
+  card?: string;
+  border?: string;
+}
+interface ThemeColorSet {
+  light?: ThemeColors;
+  dark?: ThemeColors;
+}
 interface Branding {
   displayName?: string;
   brandColor?: string;
   theme?: ThemePref;
+  colors?: ThemeColorSet;
 }
 interface BrandingResult {
   displayName: string;
   brandColor: string | null;
   theme: ThemePref;
+  colors: ThemeColorSet;
 }
 
 export interface CustomFieldDef {
@@ -44,6 +56,7 @@ export class OrganizationService {
       displayName: branding.displayName || org.name,
       brandColor: branding.brandColor || null,
       theme: branding.theme ?? 'system',
+      colors: branding.colors ?? {},
     };
   }
 
@@ -63,6 +76,7 @@ export class OrganizationService {
       ...(input.displayName !== undefined ? { displayName: input.displayName } : {}),
       ...(input.brandColor !== undefined ? { brandColor: input.brandColor } : {}),
       ...(input.theme !== undefined ? { theme: input.theme } : {}),
+      ...(input.colors !== undefined ? { colors: input.colors } : {}),
     };
     await this.prisma.organization.update({
       where: { id: organizationId },

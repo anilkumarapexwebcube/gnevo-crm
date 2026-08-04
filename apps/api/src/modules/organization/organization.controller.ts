@@ -16,13 +16,20 @@ import { OrganizationService } from './organization.service.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Use a hex color like #6366f1');
+const themeColors = z
+  .object({
+    background: hexColor.optional(),
+    foreground: hexColor.optional(),
+    card: hexColor.optional(),
+    border: hexColor.optional(),
+  })
+  .optional();
 const BrandingSchema = z.object({
   displayName: z.string().min(1).max(80).optional(),
-  brandColor: z
-    .string()
-    .regex(/^#[0-9a-fA-F]{6}$/, 'Use a hex color like #6366f1')
-    .optional(),
+  brandColor: hexColor.optional(),
   theme: z.enum(['light', 'dark', 'system']).optional(),
+  colors: z.object({ light: themeColors, dark: themeColors }).optional(),
 });
 
 const CustomFieldsSchema = z.object({
@@ -71,7 +78,7 @@ export class OrganizationController {
   @Patch('branding')
   updateBranding(
     @CurrentUser() user: AuthUser,
-    @Body(new ZodValidationPipe(BrandingSchema)) dto: { displayName?: string; brandColor?: string; theme?: 'light' | 'dark' | 'system' },
+    @Body(new ZodValidationPipe(BrandingSchema)) dto: z.infer<typeof BrandingSchema>,
   ) {
     if (!user.roles.some((r) => r === 'owner' || r === 'admin')) {
       throw new ForbiddenException('Only owners and admins can change branding');
