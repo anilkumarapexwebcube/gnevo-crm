@@ -103,6 +103,10 @@ export class CustomersService {
     await this.engine.trigger(organizationId, 'customer.created', {
       customerId: customer.id,
       name: customer.name,
+      type: customer.type,
+      industry: customer.industry,
+      website: customer.website,
+      ownerId: customer.ownerId,
     });
     await this.activity.log(organizationId, {
       verb: 'created',

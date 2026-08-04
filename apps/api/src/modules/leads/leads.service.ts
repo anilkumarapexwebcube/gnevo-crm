@@ -182,6 +182,17 @@ export class LeadsService {
     });
     await db.lead.update({ where: { id }, data: { status: 'converted' } });
 
+    // Converting a lead creates a customer — fire the same automation trigger
+    // as a direct "New customer" so those workflows run here too.
+    await this.engine.trigger(organizationId, 'customer.created', {
+      customerId: customer.id,
+      name: customer.name,
+      type: customer.type,
+      email: lead.email,
+      phone: lead.phone,
+      ownerId: customer.ownerId,
+    });
+
     await this.activity.log(organizationId, {
       verb: 'converted',
       entityType: 'lead',
