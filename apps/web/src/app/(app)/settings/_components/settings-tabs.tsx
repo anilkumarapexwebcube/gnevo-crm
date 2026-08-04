@@ -49,7 +49,7 @@ export function SettingsTabs({
   return (
     <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
       {/* Category nav */}
-      <nav className="flex gap-2 lg:flex-col lg:sticky lg:top-4 lg:self-start overflow-x-auto pb-1">
+      <nav className="flex gap-2 lg:flex-col lg:sticky lg:top-4 lg:self-start pb-1">
         {visible.map((t) => {
           const active = tab === t.key;
           return (
@@ -57,7 +57,7 @@ export function SettingsTabs({
               key={t.key}
               onClick={() => setTab(t.key)}
               className={cn(
-                'group flex shrink-0 items-center gap-3 rounded-xl px-3.5 py-3 text-left transition-all lg:w-full',
+                'group flex shrink-0 items-center gap-3 rounded-xl px-3.5 py-3 text-left transition-all lg:w-full cursor-pointer',
                 active
                   ? 'bg-primary/10 ring-1 ring-primary/20'
                   : 'hover:bg-secondary/50',
