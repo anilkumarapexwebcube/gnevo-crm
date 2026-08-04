@@ -38,6 +38,8 @@ const TRIGGERS = [
 const ACTIONS = [
   { value: 'send_email', label: 'Send email' },
   { value: 'send_notification', label: 'Send notification' },
+  { value: 'create_task', label: 'Create task' },
+  { value: 'assign_owner', label: 'Assign owner' },
   { value: 'webhook', label: 'Call webhook' },
   { value: 'ai_generate', label: 'AI generate' },
 ];
@@ -52,6 +54,15 @@ const ACTION_HELP: Record<string, { placeholder: string; help: string; showToken
   send_notification: {
     placeholder: 'Email to notify (blank = the record’s owner)',
     help: 'Sends an in-app notification (the bell). Enter an email — usually your own — to be notified.',
+  },
+  create_task: {
+    placeholder: 'Task title (optional) — e.g. Call {{name}}',
+    help: 'Creates a to-do assigned to the record’s owner. Blank = a default title.',
+    showTokens: true,
+  },
+  assign_owner: {
+    placeholder: 'New owner’s email',
+    help: 'Reassigns the lead / customer / deal to this person.',
   },
   webhook: {
     placeholder: 'https://your-endpoint.com/hook',

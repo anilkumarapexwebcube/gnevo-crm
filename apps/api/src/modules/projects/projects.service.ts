@@ -8,10 +8,14 @@ import type {
 } from '@gnevo/types';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { orgChat } from '../../common/ai.helper.js';
+import { AutomationEngineService } from '../automations/automation-engine.service.js';
 
 @Injectable()
 export class ProjectsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly engine: AutomationEngineService,
+  ) {}
 
   async list(organizationId: string, query: ListProjectsQuery) {
     const db = this.prisma.forTenant(organizationId);
@@ -119,7 +123,7 @@ export class ProjectsService {
     // Guard against depending on itself.
     const blockedBy = dto.blockedBy?.filter((b) => b !== id);
 
-    return db.task.update({
+    const updated = await db.task.update({
       where: { id },
       data: {
         ...(dto.title !== undefined ? { title: dto.title } : {}),
@@ -135,6 +139,18 @@ export class ProjectsService {
           : { dueDate: dto.dueDate ? new Date(dto.dueDate) : null }),
       },
     });
+    if (dto.status === 'done' && task.status !== 'done') {
+      await this.engine.trigger(organizationId, 'task.completed', {
+        taskId: updated.id,
+        name: updated.title,
+        title: updated.title,
+        status: 'done',
+        assigneeId: updated.assigneeId,
+        ownerId: updated.assigneeId,
+        projectId: updated.projectId,
+      });
+    }
+    return updated;
   }
 
   /** AI summary of a project's task board — progress, blockers, what's next. */

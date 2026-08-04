@@ -244,8 +244,41 @@ export class AutomationEngineService {
             body: JSON.stringify({ automation: automation.name, event: context }),
           });
           results.push({ type: action.type, ok: true });
+        } else if (action.type === 'create_task') {
+          const title = this.interpolate((action.config ?? '').trim(), context) || `Follow up: ${recordName}`;
+          const assigneeId = String(context.ownerId ?? context.assigneeId ?? '') || null;
+          await db.task.create({
+            data: { organizationId, title, status: 'todo', priority: 'medium', assigneeId },
+          });
+          results.push({ type: action.type, ok: true });
+        } else if (action.type === 'assign_owner') {
+          const wanted = this.interpolate((action.config ?? '').trim(), context).toLowerCase();
+          if (!wanted.includes('@')) {
+            results.push({ type: action.type, ok: false, note: 'Set the new owner’s email in the config' });
+          } else {
+            const target = await this.prisma.user.findFirst({
+              where: { organizationId, email: wanted, deletedAt: null },
+              select: { id: true },
+            });
+            if (!target) {
+              results.push({ type: action.type, ok: false, note: 'No user in this workspace with that email' });
+            } else if (context.leadId) {
+              await db.lead.update({ where: { id: String(context.leadId) }, data: { ownerId: target.id } });
+              results.push({ type: action.type, ok: true });
+            } else if (context.customerId) {
+              await db.customer.update({ where: { id: String(context.customerId) }, data: { ownerId: target.id } });
+              results.push({ type: action.type, ok: true });
+            } else if (context.dealId) {
+              await db.deal.update({ where: { id: String(context.dealId) }, data: { ownerId: target.id } });
+              results.push({ type: action.type, ok: true });
+            } else {
+              results.push({ type: action.type, ok: false, note: 'No lead/customer/deal on this event to reassign' });
+            }
+          }
+        } else if (action.type === 'ai_generate') {
+          results.push({ type: action.type, ok: true, note: 'AI actions run on the Workers service' });
         } else {
-          results.push({ type: action.type, ok: true, note: 'recorded (delayed/advanced actions run on the Workers service)' });
+          results.push({ type: action.type, ok: true, note: 'recorded' });
         }
       } catch (err) {
         results.push({ type: action.type, ok: false, note: (err as Error).message });

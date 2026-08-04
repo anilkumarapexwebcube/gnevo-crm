@@ -172,8 +172,38 @@ const automationWorker = new Worker<AutomationJob>(
             });
             results.push({ type: action.type, ok: true });
           }
+        } else if (action.type === 'create_task') {
+          const title = interpolate((action.config ?? '').trim(), event) || `Follow up: ${subject}`;
+          const assigneeId = String(event.ownerId ?? event.assigneeId ?? '') || null;
+          await prisma.task.create({
+            data: { organizationId: automation.organizationId, title, status: 'todo', priority: 'medium', assigneeId },
+          });
+          results.push({ type: action.type, ok: true });
+        } else if (action.type === 'assign_owner') {
+          const wanted = interpolate((action.config ?? '').trim(), event).toLowerCase();
+          if (!wanted.includes('@')) {
+            results.push({ type: action.type, ok: false, note: 'Set the new owner email in config' });
+          } else {
+            const target = await prisma.user.findFirst({
+              where: { organizationId: automation.organizationId, email: wanted, deletedAt: null },
+              select: { id: true },
+            });
+            if (!target) {
+              results.push({ type: action.type, ok: false, note: 'No user with that email' });
+            } else if (event.leadId) {
+              await prisma.lead.update({ where: { id: String(event.leadId) }, data: { ownerId: target.id } });
+              results.push({ type: action.type, ok: true });
+            } else if (event.customerId) {
+              await prisma.customer.update({ where: { id: String(event.customerId) }, data: { ownerId: target.id } });
+              results.push({ type: action.type, ok: true });
+            } else if (event.dealId) {
+              await prisma.deal.update({ where: { id: String(event.dealId) }, data: { ownerId: target.id } });
+              results.push({ type: action.type, ok: true });
+            } else {
+              results.push({ type: action.type, ok: false, note: 'No record to reassign' });
+            }
+          }
         } else {
-          // create_task / assign_owner: recorded for now.
           results.push({ type: action.type, ok: true, note: 'recorded' });
         }
       } catch (err) {

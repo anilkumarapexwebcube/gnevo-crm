@@ -116,9 +116,24 @@ export class LeadsService {
   }
 
   async update(organizationId: string, id: string, dto: UpdateLeadRequest) {
-    await this.get(organizationId, id); // 404 if not in tenant
+    const before = await this.get(organizationId, id); // 404 if not in tenant
     const db = this.prisma.forTenant(organizationId);
-    return db.lead.update({ where: { id }, data: dto });
+    const lead = await db.lead.update({ where: { id }, data: dto });
+    if (dto.status && dto.status !== before.status) {
+      await this.engine.trigger(organizationId, 'lead.status_changed', {
+        leadId: lead.id,
+        name: lead.name,
+        company: lead.company,
+        email: lead.email,
+        phone: lead.phone,
+        source: lead.source,
+        status: lead.status,
+        previousStatus: before.status,
+        score: lead.score,
+        ownerId: lead.ownerId,
+      });
+    }
+    return lead;
   }
 
   async remove(organizationId: string, id: string, actorId?: string) {
