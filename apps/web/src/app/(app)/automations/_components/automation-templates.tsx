@@ -28,36 +28,39 @@ interface Template {
 const TEMPLATES: Template[] = [
   {
     name: 'Welcome new leads',
-    description: 'Greet every new lead and draft a follow-up with AI.',
+    description: 'Email a warm welcome to every new lead, and alert its owner in-app.',
     triggerType: 'lead.created',
     actions: [
-      { type: 'send_email', config: 'Welcome email' },
-      { type: 'ai_generate', config: '' },
+      { type: 'send_email', config: '{{email}}' },
+      { type: 'send_notification', config: '' },
     ],
   },
   {
     name: 'New customer onboarding',
-    description: 'Kick off onboarding when a customer is created.',
+    description: 'Create an onboarding task and notify the owner when a customer is added.',
     triggerType: 'customer.created',
     actions: [
-      { type: 'create_task', config: 'Onboarding checklist' },
-      { type: 'send_notification', config: 'New customer added' },
+      { type: 'create_task', config: 'Onboarding: {{name}}' },
+      { type: 'send_notification', config: '' },
     ],
+  },
+  {
+    name: 'Lead status changed',
+    description: 'Notify the lead owner whenever the lead moves to a new status.',
+    triggerType: 'lead.status_changed',
+    actions: [{ type: 'send_notification', config: '' }],
   },
   {
     name: 'Deal stage change alert',
-    description: 'Notify the team + AI note whenever a deal moves stage.',
+    description: 'Notify the deal owner whenever a deal moves to a new stage.',
     triggerType: 'deal.stage_changed',
-    actions: [
-      { type: 'send_notification', config: '' },
-      { type: 'ai_generate', config: '' },
-    ],
+    actions: [{ type: 'send_notification', config: '' }],
   },
   {
-    name: 'Task done follow-up',
-    description: 'Draft the next follow-up when a task is completed.',
+    name: 'Task follow-up',
+    description: 'Create a follow-up task automatically when a task is completed.',
     triggerType: 'task.completed',
-    actions: [{ type: 'ai_generate', config: '' }],
+    actions: [{ type: 'create_task', config: 'Follow up after: {{name}}' }],
   },
 ];
 
