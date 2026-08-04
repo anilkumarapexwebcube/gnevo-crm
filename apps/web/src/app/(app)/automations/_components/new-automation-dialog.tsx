@@ -38,10 +38,36 @@ const TRIGGERS = [
 const ACTIONS = [
   { value: 'send_email', label: 'Send email' },
   { value: 'send_notification', label: 'Send notification' },
-  { value: 'create_task', label: 'Create task' },
-  { value: 'assign_owner', label: 'Assign owner' },
   { value: 'webhook', label: 'Call webhook' },
   { value: 'ai_generate', label: 'AI generate' },
+];
+
+// Per-action guidance so the Config field is never a mystery.
+const ACTION_HELP: Record<string, { placeholder: string; help: string; showTokens?: boolean }> = {
+  send_email: {
+    placeholder: 'Who to email — a fixed address, or {{email}}',
+    help: 'Send to a fixed email, or use {{email}} to email the record itself (e.g. welcome a new lead). Add “| your message” for custom text.',
+    showTokens: true,
+  },
+  send_notification: {
+    placeholder: 'Email to notify (blank = the record’s owner)',
+    help: 'Sends an in-app notification (the bell). Enter an email — usually your own — to be notified.',
+  },
+  webhook: {
+    placeholder: 'https://your-endpoint.com/hook',
+    help: 'We send (POST) the event data to this URL.',
+  },
+  ai_generate: {
+    placeholder: 'What should the AI write? (optional)',
+    help: 'e.g. “Draft a friendly follow-up note.” Leave blank for a smart default.',
+  },
+};
+
+// Fields from the record that can be inserted into a config value.
+const FIELD_TOKENS = [
+  { token: '{{email}}', label: 'Email' },
+  { token: '{{name}}', label: 'Name' },
+  { token: '{{company}}', label: 'Company' },
 ];
 
 const OPERATORS = [
@@ -57,7 +83,7 @@ interface Step {
   config: string;
 }
 
-export function NewAutomationDialog() {
+export function NewAutomationDialog({ meEmail }: { meEmail?: string | null }) {
   const [open, setOpen] = useState(false);
   const [trigger, setTrigger] = useState('lead.created');
   const [steps, setSteps] = useState<Step[]>([{ type: 'send_email', config: '' }]);
@@ -165,44 +191,77 @@ export function NewAutomationDialog() {
 
           <div className="grid gap-2">
             <Label>Then (actions)</Label>
-            <div className="flex flex-col gap-2">
-              {steps.map((step, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <Select
-                    items={ACTIONS}
-                    value={step.type}
-                    onValueChange={(v) => updateStep(i, { type: v ?? 'send_email' })}
-                  >
-                    <SelectTrigger size="sm" className="w-44">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ACTIONS.map((a) => (
-                        <SelectItem key={a.value} value={a.value}>
-                          {a.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    value={step.config}
-                    onChange={(e) => updateStep(i, { config: e.target.value })}
-                    placeholder="Config (optional)"
-                    className="h-7 flex-1"
-                  />
-                  {steps.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => setSteps((prev) => prev.filter((_, idx) => idx !== i))}
-                      aria-label="Remove action"
-                    >
-                      <X />
-                    </Button>
-                  )}
-                </div>
-              ))}
+            <div className="flex flex-col gap-2.5">
+              {steps.map((step, i) => {
+                const hint = ACTION_HELP[step.type];
+                const setConfig = (config: string) => updateStep(i, { config });
+                const appendToken = (token: string) =>
+                  updateStep(i, { config: step.config ? `${step.config} ${token}` : token });
+                return (
+                  <div key={i} className="rounded-xl border border-border/60 bg-secondary/20 p-3">
+                    <div className="flex items-center gap-2">
+                      <Select
+                        items={ACTIONS}
+                        value={step.type}
+                        onValueChange={(v) => updateStep(i, { type: v ?? 'send_email', config: '' })}
+                      >
+                        <SelectTrigger size="sm" className="w-44">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ACTIONS.map((a) => (
+                            <SelectItem key={a.value} value={a.value}>
+                              {a.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="flex-1" />
+                      {steps.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => setSteps((prev) => prev.filter((_, idx) => idx !== i))}
+                          aria-label="Remove action"
+                        >
+                          <X />
+                        </Button>
+                      )}
+                    </div>
+
+                    <Input
+                      value={step.config}
+                      onChange={(e) => updateStep(i, { config: e.target.value })}
+                      placeholder={hint?.placeholder ?? 'Config (optional)'}
+                      className="mt-2 h-8"
+                    />
+
+                    {/* One-click suggestions so nobody has to guess the syntax. */}
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      {step.type === 'send_email' && (
+                        <Chip onClick={() => setConfig('{{email}}')}>Email the record</Chip>
+                      )}
+                      {(step.type === 'send_email' || step.type === 'send_notification') && meEmail && (
+                        <Chip onClick={() => setConfig(meEmail)}>
+                          {step.type === 'send_notification' ? 'Notify me' : 'Email me'}
+                        </Chip>
+                      )}
+                      {step.type === 'send_notification' && (
+                        <Chip onClick={() => setConfig('')}>Notify record owner</Chip>
+                      )}
+                      {hint?.showTokens &&
+                        FIELD_TOKENS.map((t) => (
+                          <Chip key={t.token} onClick={() => appendToken(t.token)}>
+                            + {t.label}
+                          </Chip>
+                        ))}
+                    </div>
+
+                    {hint?.help && <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">{hint.help}</p>}
+                  </div>
+                );
+              })}
             </div>
             <Button
               type="button"
@@ -320,5 +379,18 @@ export function NewAutomationDialog() {
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Small one-click pill that fills a config value — no syntax to memorise. */
+function Chip({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-full border border-border/60 bg-background px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary cursor-pointer"
+    >
+      {children}
+    </button>
   );
 }

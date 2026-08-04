@@ -1,5 +1,5 @@
 import { Workflow } from 'lucide-react';
-import { apiServer } from '@/lib/session';
+import { apiServer, getCurrentUser } from '@/lib/session';
 import { DetailLink } from '@/components/detail-link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,7 @@ interface AutomationRow {
 export default async function AutomationsPage() {
   let automations: AutomationRow[] = [];
   let loadError = false;
+  const [user] = await Promise.all([getCurrentUser()]);
   try {
     automations = await apiServer<AutomationRow[]>('/v1/automations');
   } catch {
@@ -37,7 +38,7 @@ export default async function AutomationsPage() {
         </div>
         <div className="flex items-center gap-2">
           <AutomationTemplates />
-          <NewAutomationDialog />
+          <NewAutomationDialog meEmail={user?.email} />
         </div>
       </div>
 
@@ -56,7 +57,7 @@ export default async function AutomationsPage() {
               Create a trigger → action workflow to automate busywork.
             </p>
           </div>
-          <NewAutomationDialog />
+          <NewAutomationDialog meEmail={user?.email} />
         </Card>
       ) : (
         <div className="flex flex-col gap-3">

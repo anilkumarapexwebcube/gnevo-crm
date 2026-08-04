@@ -82,9 +82,12 @@ const automationWorker = new Worker<AutomationJob>(
             results.push({ type: action.type, ok: true, output });
           }
         } else if (action.type === 'send_email') {
-          const to = (action.config ?? '').trim();
+          const raw = (action.config ?? '').trim();
+          const [recipientPart, ...msgParts] = raw.split('|');
+          const to = interpolate((recipientPart ?? '').trim(), event);
+          const customMsg = msgParts.join('|').trim();
           if (!to.includes('@')) {
-            results.push({ type: action.type, ok: false, note: 'Put the recipient email in the action config' });
+            results.push({ type: action.type, ok: false, note: 'Config needs a recipient — a fixed email, or {{email}} to email the record' });
           } else {
             const org = await prisma.organization.findUnique({
               where: { id: automation.organizationId },
@@ -96,27 +99,81 @@ const automationWorker = new Worker<AutomationJob>(
             };
             const brandName = brand.displayName || org?.name || 'Gnevo CRM';
             const appUrl = process.env.WEB_URL || 'http://localhost:3000';
-            const heading = eventLabel.replace(/\b\w/g, (c) => c.toUpperCase());
-            const html = renderBrandedEmail({
-              brandName,
-              brandColor: brand.brandColor ?? null,
-              heading,
-              intro: `Your automation “${automation.name}” just ran in ${brandName}.`,
-              rows: automationEmailRows(event),
-              ctaText: `Open ${brandName}`,
-              ctaUrl: appUrl,
-              footerNote: `You’re receiving this because the “${automation.name}” automation is active in ${brandName}.`,
-            });
-            const sent = await sendMail(
-              to,
-              `${brandName}: ${heading} — ${subject}`,
-              `Your automation "${automation.name}" ran.\n\nEvent: ${eventLabel}\nRecord: ${subject}\n\nOpen ${brandName}: ${appUrl}`,
-              html,
-            );
+            const emailedRecord = !!event.email && to.toLowerCase() === String(event.email).toLowerCase();
+            const firstName = String(event.name ?? '').trim().split(' ')[0] || 'there';
+            let subjectLine: string;
+            let text: string;
+            let html: string;
+            if (emailedRecord) {
+              const intro = customMsg || `Thank you for your interest in ${brandName}. We’ve received your details and a member of our team will be in touch with you shortly.`;
+              subjectLine = `Welcome to ${brandName}, ${firstName}!`;
+              text = `Hi ${firstName},\n\n${intro}\n\n— ${brandName}`;
+              html = renderBrandedEmail({
+                brandName,
+                brandColor: brand.brandColor ?? null,
+                heading: `Welcome, ${firstName}!`,
+                intro,
+                ctaText: `Visit ${brandName}`,
+                ctaUrl: appUrl,
+                footerNote: `This is an automated message from ${brandName}.`,
+              });
+            } else {
+              const heading = eventLabel.replace(/\b\w/g, (c) => c.toUpperCase());
+              const intro = customMsg || `Your automation “${automation.name}” just ran in ${brandName}.`;
+              subjectLine = `${brandName}: ${heading} — ${subject}`;
+              text = `${intro}\n\nEvent: ${eventLabel}\nRecord: ${subject}\n\nOpen ${brandName}: ${appUrl}`;
+              html = renderBrandedEmail({
+                brandName,
+                brandColor: brand.brandColor ?? null,
+                heading,
+                intro,
+                rows: automationEmailRows(event),
+                ctaText: `Open ${brandName}`,
+                ctaUrl: appUrl,
+                footerNote: `You’re receiving this because the “${automation.name}” automation is active in ${brandName}.`,
+              });
+            }
+            const sent = await sendMail(to, subjectLine, text, html);
             results.push({ type: action.type, ok: sent, note: sent ? undefined : 'SMTP not configured or the send failed' });
           }
+        } else if (action.type === 'send_notification') {
+          const wanted = (action.config ?? '').trim().toLowerCase();
+          let userId = '';
+          if (wanted.includes('@')) {
+            const target = await prisma.user.findFirst({
+              where: { organizationId: automation.organizationId, email: wanted, deletedAt: null },
+              select: { id: true },
+            });
+            userId = target?.id ?? '';
+          } else {
+            userId = String(event.ownerId ?? event.assigneeId ?? '');
+          }
+          if (!userId) {
+            results.push({ type: action.type, ok: false, note: wanted ? 'No user with that email' : 'No owner on the record — set a recipient email in config' });
+          } else {
+            const link = event.leadId
+              ? `/leads/${event.leadId}`
+              : event.customerId
+                ? `/customers/${event.customerId}`
+                : event.ticketId
+                  ? `/tickets/${event.ticketId}`
+                  : event.dealId
+                    ? '/deals'
+                    : null;
+            await prisma.notification.create({
+              data: {
+                organizationId: automation.organizationId,
+                userId,
+                title: eventLabel.replace(/\b\w/g, (c) => c.toUpperCase()),
+                body: subject,
+                link,
+                type: 'automation',
+              },
+            });
+            results.push({ type: action.type, ok: true });
+          }
         } else {
-          // send_notification / create_task / assign_owner: recorded for now.
+          // create_task / assign_owner: recorded for now.
           results.push({ type: action.type, ok: true, note: 'recorded' });
         }
       } catch (err) {
@@ -140,6 +197,14 @@ const automationWorker = new Worker<AutomationJob>(
  * Scheduled worker: runs a daily job that snapshots every keyword's current
  * metrics into keyword_snapshots, building rank-tracking history over time.
  */
+/** Replace {{field}} tokens with values from the event context. */
+function interpolate(template: string, context: Record<string, unknown>): string {
+  return template.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_m, key: string) => {
+    const v = context[key];
+    return v === undefined || v === null ? '' : String(v);
+  });
+}
+
 async function sendMail(to: string, subject: string, text: string, html?: string): Promise<boolean> {
   const host = process.env.SMTP_HOST;
   if (!host) return false;

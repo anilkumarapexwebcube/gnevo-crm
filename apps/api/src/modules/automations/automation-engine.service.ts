@@ -159,37 +159,81 @@ export class AutomationEngineService {
     for (const action of def.actions ?? []) {
       try {
         if (action.type === 'send_email') {
-          const to = (action.config ?? '').trim();
+          // config: "<recipient> | <optional custom message>". Recipient may be a
+          // fixed email, or a token like {{email}} to email the record itself
+          // (e.g. a welcome email to a new lead).
+          const raw = (action.config ?? '').trim();
+          const [recipientPart, ...msgParts] = raw.split('|');
+          const to = this.interpolate((recipientPart ?? '').trim(), context);
+          const customMsg = msgParts.join('|').trim();
           if (!to.includes('@')) {
-            results.push({ type: action.type, ok: false, note: 'Put the recipient email in the action config' });
+            results.push({ type: action.type, ok: false, note: 'Config needs a recipient — a fixed email, or {{email}} to email the record' });
           } else {
-            const heading = `${eventLabel.replace(/\b\w/g, (c) => c.toUpperCase())}`;
-            const html = renderBrandedEmail({
-              brandName,
-              brandColor,
-              heading,
-              intro: `Your automation “${automation.name}” just ran in ${brandName}.`,
-              rows: automationEmailRows(context),
-              ctaText: `Open ${brandName}`,
-              ctaUrl: appUrl,
-              footerNote: `You’re receiving this because the “${automation.name}” automation is active in ${brandName}.`,
-            });
-            const sent = await this.mailer.send(
-              to,
-              `${brandName}: ${heading} — ${recordName}`,
-              `Your automation "${automation.name}" ran.\n\nEvent: ${eventLabel}\nRecord: ${recordName}\n\nOpen ${brandName}: ${appUrl}`,
-              html,
-            );
+            const emailedRecord = !!context.email && to.toLowerCase() === String(context.email).toLowerCase();
+            const firstName = String(context.name ?? '').trim().split(' ')[0] || 'there';
+            let subjectLine: string;
+            let text: string;
+            let html: string;
+            if (emailedRecord) {
+              // Warm, customer-facing welcome/thank-you email (no internal fields).
+              const intro = customMsg || `Thank you for your interest in ${brandName}. We’ve received your details and a member of our team will be in touch with you shortly.`;
+              subjectLine = `Welcome to ${brandName}, ${firstName}!`;
+              text = `Hi ${firstName},\n\n${intro}\n\n— ${brandName}`;
+              html = renderBrandedEmail({
+                brandName,
+                brandColor,
+                heading: `Welcome, ${firstName}!`,
+                intro,
+                ctaText: `Visit ${brandName}`,
+                ctaUrl: appUrl,
+                footerNote: `This is an automated message from ${brandName}.`,
+              });
+            } else {
+              // Internal notification email with the record's details.
+              const heading = eventLabel.replace(/\b\w/g, (c) => c.toUpperCase());
+              const intro = customMsg || `Your automation “${automation.name}” just ran in ${brandName}.`;
+              subjectLine = `${brandName}: ${heading} — ${recordName}`;
+              text = `${intro}\n\nEvent: ${eventLabel}\nRecord: ${recordName}\n\nOpen ${brandName}: ${appUrl}`;
+              html = renderBrandedEmail({
+                brandName,
+                brandColor,
+                heading,
+                intro,
+                rows: automationEmailRows(context),
+                ctaText: `Open ${brandName}`,
+                ctaUrl: appUrl,
+                footerNote: `You’re receiving this because the “${automation.name}” automation is active in ${brandName}.`,
+              });
+            }
+            const sent = await this.mailer.send(to, subjectLine, text, html);
             results.push({ type: action.type, ok: sent, note: sent ? undefined : 'SMTP not configured or the send failed' });
           }
         } else if (action.type === 'send_notification') {
-          const userId = String(context.ownerId ?? context.assigneeId ?? '');
+          // config (optional) = email of the person to notify; blank = the
+          // record's owner/assignee. The notification lands in their bell.
+          const wanted = (action.config ?? '').trim().toLowerCase();
+          let userId = '';
+          if (wanted.includes('@')) {
+            const target = await this.prisma.user.findFirst({
+              where: { organizationId, email: wanted, deletedAt: null },
+              select: { id: true },
+            });
+            userId = target?.id ?? '';
+          } else {
+            userId = String(context.ownerId ?? context.assigneeId ?? '');
+          }
           if (!userId) {
-            results.push({ type: action.type, ok: false, note: 'No owner/assignee on this record to notify' });
+            results.push({
+              type: action.type,
+              ok: false,
+              note: wanted ? 'No user in this workspace with that email' : 'No owner on the record — put a recipient email in the action config',
+            });
           } else {
             await this.notifications.notify(organizationId, userId, {
-              title: automation.name,
-              body: `${eventLabel}: ${recordName}`,
+              title: `${eventLabel.replace(/\b\w/g, (c) => c.toUpperCase())}`,
+              body: recordName,
+              link: this.recordLink(context),
+              type: 'automation',
             });
             results.push({ type: action.type, ok: true });
           }
@@ -216,6 +260,23 @@ export class AutomationEngineService {
         context: { event: context, results } as unknown as Prisma.InputJsonValue,
       },
     });
+  }
+
+  /** Replace {{field}} tokens in a string with values from the event context. */
+  private interpolate(template: string, context: Record<string, unknown>): string {
+    return template.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_m, key: string) => {
+      const v = context[key];
+      return v === undefined || v === null ? '' : String(v);
+    });
+  }
+
+  /** An in-app link to the record an event is about (for notifications). */
+  private recordLink(context: Record<string, unknown>): string | undefined {
+    if (context.leadId) return `/leads/${context.leadId}`;
+    if (context.customerId) return `/customers/${context.customerId}`;
+    if (context.ticketId) return `/tickets/${context.ticketId}`;
+    if (context.dealId) return `/deals`;
+    return undefined;
   }
 
   /** The record id an event is about — used to correlate wait-for-event runs. */
