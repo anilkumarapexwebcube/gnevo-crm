@@ -89,6 +89,14 @@ export class LeadsService {
     await this.engine.trigger(organizationId, 'lead.created', {
       leadId: lead.id,
       name: lead.name,
+      company: lead.company,
+      email: lead.email,
+      phone: lead.phone,
+      source: lead.source,
+      status: lead.status,
+      score: lead.score,
+      createdAt: lead.createdAt,
+      ownerId: lead.ownerId,
     });
     await this.activity.log(organizationId, {
       verb: 'created',

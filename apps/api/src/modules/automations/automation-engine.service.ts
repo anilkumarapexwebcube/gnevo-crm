@@ -4,6 +4,9 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { QueueService } from '../../queue/queue.service.js';
 import { WebhooksService } from '../webhooks/webhooks.service.js';
 import { IntegrationsService } from '../integrations/integrations.service.js';
+import { MailerService } from '../../common/mailer.service.js';
+import { NotificationsService } from '../events/notifications.service.js';
+import { renderBrandedEmail, automationEmailRows } from '../../common/email-template.js';
 
 /**
  * Fires automations for a domain event: finds active automations matching the
@@ -19,6 +22,8 @@ export class AutomationEngineService {
     private readonly queue: QueueService,
     private readonly webhooks: WebhooksService,
     private readonly integrations: IntegrationsService,
+    private readonly mailer: MailerService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async trigger(
@@ -98,23 +103,119 @@ export class AutomationEngineService {
           },
         });
 
-        // Delay: schedule the job into the future when configured.
         const delayMs = Math.max(0, Math.floor((def.delaySeconds ?? 0) * 1000));
-        await this.queue.automation.add(
-          'run',
-          { runId: run.id, automationId: automation.id, organizationId },
-          {
-            attempts: 3,
-            backoff: { type: 'exponential', delay: 2000 },
-            removeOnComplete: true,
-            removeOnFail: 100,
-            ...(delayMs > 0 ? { delay: delayMs } : {}),
-          },
-        );
+        if (delayMs > 0) {
+          // Delayed → hand off to the Workers service (BullMQ) to run later.
+          await this.queue.automation.add(
+            'run',
+            { runId: run.id, automationId: automation.id, organizationId },
+            { attempts: 3, backoff: { type: 'exponential', delay: 2000 }, removeOnComplete: true, removeOnFail: 100, delay: delayMs },
+          );
+        } else {
+          // Immediate → run the actions right now, inline, so automations work
+          // even without a separate Workers service. Fire-and-forget so the
+          // domain operation that triggered this isn't blocked (e.g. on SMTP).
+          void this.runActionsInline(db, automation, run.id, organizationId, context).catch((e) =>
+            this.logger.error(`Inline automation run ${run.id} failed`, e as Error),
+          );
+        }
       }
     } catch (err) {
       this.logger.error(`Automation trigger '${triggerType}' failed`, err as Error);
     }
+  }
+
+  /**
+   * Execute an automation's actions immediately (no worker needed). Handles
+   * send_email, send_notification and webhook; other action types are recorded
+   * (they run on the Workers service when deployed). Records the outcome on the
+   * AutomationRun so the run inspector shows what happened.
+   */
+  private async runActionsInline(
+    db: ReturnType<PrismaService['forTenant']>,
+    automation: { id: string; name: string; triggerType: string; definition: unknown },
+    runId: string,
+    organizationId: string,
+    context: Record<string, unknown>,
+  ): Promise<void> {
+    const def = (automation.definition ?? {}) as { actions?: { type: string; config?: string }[] };
+    const eventLabel = automation.triggerType.replace(/[._]/g, ' ');
+    const recordName = String(context.name ?? context.title ?? 'a record');
+    const results: { type: string; ok: boolean; note?: string }[] = [];
+
+    // Branding for the email (white-label): the workspace's name + accent color.
+    const org = await this.prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { name: true, settings: true },
+    });
+    const brand = ((org?.settings as Record<string, unknown>)?.branding ?? {}) as {
+      displayName?: string;
+      brandColor?: string;
+    };
+    const brandName = brand.displayName || org?.name || 'Gnevo CRM';
+    const brandColor = brand.brandColor ?? null;
+    const appUrl = process.env.WEB_URL || 'http://localhost:3000';
+
+    for (const action of def.actions ?? []) {
+      try {
+        if (action.type === 'send_email') {
+          const to = (action.config ?? '').trim();
+          if (!to.includes('@')) {
+            results.push({ type: action.type, ok: false, note: 'Put the recipient email in the action config' });
+          } else {
+            const heading = `${eventLabel.replace(/\b\w/g, (c) => c.toUpperCase())}`;
+            const html = renderBrandedEmail({
+              brandName,
+              brandColor,
+              heading,
+              intro: `Your automation “${automation.name}” just ran in ${brandName}.`,
+              rows: automationEmailRows(context),
+              ctaText: `Open ${brandName}`,
+              ctaUrl: appUrl,
+              footerNote: `You’re receiving this because the “${automation.name}” automation is active in ${brandName}.`,
+            });
+            const sent = await this.mailer.send(
+              to,
+              `${brandName}: ${heading} — ${recordName}`,
+              `Your automation "${automation.name}" ran.\n\nEvent: ${eventLabel}\nRecord: ${recordName}\n\nOpen ${brandName}: ${appUrl}`,
+              html,
+            );
+            results.push({ type: action.type, ok: sent, note: sent ? undefined : 'SMTP not configured or the send failed' });
+          }
+        } else if (action.type === 'send_notification') {
+          const userId = String(context.ownerId ?? context.assigneeId ?? '');
+          if (!userId) {
+            results.push({ type: action.type, ok: false, note: 'No owner/assignee on this record to notify' });
+          } else {
+            await this.notifications.notify(organizationId, userId, {
+              title: automation.name,
+              body: `${eventLabel}: ${recordName}`,
+            });
+            results.push({ type: action.type, ok: true });
+          }
+        } else if (action.type === 'webhook' && action.config?.startsWith('http')) {
+          await fetch(action.config, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ automation: automation.name, event: context }),
+          });
+          results.push({ type: action.type, ok: true });
+        } else {
+          results.push({ type: action.type, ok: true, note: 'recorded (delayed/advanced actions run on the Workers service)' });
+        }
+      } catch (err) {
+        results.push({ type: action.type, ok: false, note: (err as Error).message });
+      }
+    }
+
+    await db.automationRun.update({
+      where: { id: runId },
+      data: {
+        status: 'success',
+        finishedAt: new Date(),
+        context: { event: context, results } as unknown as Prisma.InputJsonValue,
+      },
+    });
   }
 
   /** The record id an event is about — used to correlate wait-for-event runs. */

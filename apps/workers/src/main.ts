@@ -5,6 +5,7 @@ import * as nodemailer from 'nodemailer';
 import { prisma, Prisma } from '@gnevo/db';
 import { chatComplete, resolveProviderFromEnv } from '@gnevo/ai';
 import { QUEUE_NAMES } from './queues.js';
+import { renderBrandedEmail, automationEmailRows } from './email-template.js';
 
 const connection = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
   maxRetriesPerRequest: null,
@@ -80,9 +81,42 @@ const automationWorker = new Worker<AutomationJob>(
             });
             results.push({ type: action.type, ok: true, output });
           }
+        } else if (action.type === 'send_email') {
+          const to = (action.config ?? '').trim();
+          if (!to.includes('@')) {
+            results.push({ type: action.type, ok: false, note: 'Put the recipient email in the action config' });
+          } else {
+            const org = await prisma.organization.findUnique({
+              where: { id: automation.organizationId },
+              select: { name: true, settings: true },
+            });
+            const brand = ((org?.settings as Record<string, unknown>)?.branding ?? {}) as {
+              displayName?: string;
+              brandColor?: string;
+            };
+            const brandName = brand.displayName || org?.name || 'Gnevo CRM';
+            const appUrl = process.env.WEB_URL || 'http://localhost:3000';
+            const heading = eventLabel.replace(/\b\w/g, (c) => c.toUpperCase());
+            const html = renderBrandedEmail({
+              brandName,
+              brandColor: brand.brandColor ?? null,
+              heading,
+              intro: `Your automation “${automation.name}” just ran in ${brandName}.`,
+              rows: automationEmailRows(event),
+              ctaText: `Open ${brandName}`,
+              ctaUrl: appUrl,
+              footerNote: `You’re receiving this because the “${automation.name}” automation is active in ${brandName}.`,
+            });
+            const sent = await sendMail(
+              to,
+              `${brandName}: ${heading} — ${subject}`,
+              `Your automation "${automation.name}" ran.\n\nEvent: ${eventLabel}\nRecord: ${subject}\n\nOpen ${brandName}: ${appUrl}`,
+              html,
+            );
+            results.push({ type: action.type, ok: sent, note: sent ? undefined : 'SMTP not configured or the send failed' });
+          }
         } else {
-          // send_email / send_notification / create_task / assign_owner:
-          // recorded for now; full integrations land with email/notifications infra.
+          // send_notification / create_task / assign_owner: recorded for now.
           results.push({ type: action.type, ok: true, note: 'recorded' });
         }
       } catch (err) {
@@ -106,7 +140,7 @@ const automationWorker = new Worker<AutomationJob>(
  * Scheduled worker: runs a daily job that snapshots every keyword's current
  * metrics into keyword_snapshots, building rank-tracking history over time.
  */
-async function sendMail(to: string, subject: string, text: string): Promise<boolean> {
+async function sendMail(to: string, subject: string, text: string, html?: string): Promise<boolean> {
   const host = process.env.SMTP_HOST;
   if (!host) return false;
   try {
@@ -123,6 +157,7 @@ async function sendMail(to: string, subject: string, text: string): Promise<bool
       to,
       subject,
       text,
+      ...(html ? { html } : {}),
     });
     return true;
   } catch {
